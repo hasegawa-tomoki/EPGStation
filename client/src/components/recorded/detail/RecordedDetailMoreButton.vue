@@ -81,11 +81,7 @@
             :isDelaySnackbarViewNum="800"
             v-on:deleteSuccessful="deleteSuccessful"
         ></RecordedDeleteDialog>
-        <MoveToExternalDialog
-            :isOpen.sync="isOpenMoveToExternalDialog"
-            :recordedItem="recordedItem"
-            v-on:moved="onMovedToExternal"
-        ></MoveToExternalDialog>
+        <MoveToExternalDialog :isOpen.sync="isOpenMoveToExternalDialog" :recordedItem="recordedItem" v-on:moved="onMovedToExternal"></MoveToExternalDialog>
     </div>
 </template>
 
