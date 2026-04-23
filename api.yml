@@ -1709,7 +1709,7 @@ components:
                 total:
                     type: integer
                 currentRecordedId:
-                    $ref: '#/components/schemas/RecordedId'
+                    type: integer
                     nullable: true
                 successIds:
                     type: array
