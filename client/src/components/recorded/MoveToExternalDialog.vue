@@ -3,14 +3,12 @@
         <v-card>
             <v-card-title>外部ストレージへ移動</v-card-title>
             <v-card-text>
-                <div v-if="targetItems.length === 1" class="body-2 mb-3">
-                    「{{ targetItems[0].name }}」の録画ファイル一式を外部ストレージへ物理移動します。
-                </div>
+                <div v-if="targetItems.length === 1" class="body-2 mb-3">「{{ targetItems[0].name }}」の録画ファイル一式を外部ストレージへ物理移動します。</div>
                 <div v-else class="body-2 mb-3">
-                    選択した <strong>{{ targetItems.length }}</strong> 件の録画を外部ストレージへ移動します。
-                    <div v-if="skippedCount > 0" class="caption text--secondary mt-1">
-                        ※ {{ skippedCount }} 件は移動対象外 (既に外部/録画中/エンコード中) のためスキップ
-                    </div>
+                    選択した
+                    <strong>{{ targetItems.length }}</strong>
+                    件の録画を外部ストレージへ移動します。
+                    <div v-if="skippedCount > 0" class="caption text--secondary mt-1">※ {{ skippedCount }} 件は移動対象外 (既に外部/録画中/エンコード中) のためスキップ</div>
                 </div>
                 <v-select
                     v-model="selectedStorageName"
@@ -79,17 +77,8 @@ export default class MoveToExternalDialog extends Vue {
      * 実際に移動対象にする RecordedItem 一覧 (録画中/エンコード中/既に外部はスキップ)
      */
     get targetItems(): apid.RecordedItem[] {
-        const all: apid.RecordedItem[] = this.recordedItems.length > 0
-            ? this.recordedItems
-            : this.recordedItem
-              ? [this.recordedItem]
-              : [];
-        return all.filter(
-            r =>
-                r.isRecording === false &&
-                r.isEncoding === false &&
-                typeof r.externalPath === 'undefined',
-        );
+        const all: apid.RecordedItem[] = this.recordedItems.length > 0 ? this.recordedItems : this.recordedItem ? [this.recordedItem] : [];
+        return all.filter(r => r.isRecording === false && r.isEncoding === false && typeof r.externalPath === 'undefined');
     }
 
     get skippedCount(): number {
@@ -103,11 +92,7 @@ export default class MoveToExternalDialog extends Vue {
     }
 
     get canSubmit(): boolean {
-        return (
-            typeof this.selectedStorageName === 'string' &&
-            this.selectedStorageName.length > 0 &&
-            this.targetItems.length > 0
-        );
+        return typeof this.selectedStorageName === 'string' && this.selectedStorageName.length > 0 && this.targetItems.length > 0;
     }
 
     @Watch('isOpen')
@@ -166,10 +151,7 @@ export default class MoveToExternalDialog extends Vue {
         if (failures.length === 0) {
             this.snackbar.open({
                 color: 'success',
-                text:
-                    movedIds.length === 1
-                        ? '外部ストレージへの移動が完了'
-                        : `外部ストレージへ ${movedIds.length} 件移動しました`,
+                text: movedIds.length === 1 ? '外部ストレージへの移動が完了' : `外部ストレージへ ${movedIds.length} 件移動しました`,
             });
         } else {
             this.snackbar.open({
