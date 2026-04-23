@@ -20,7 +20,14 @@
                     hide-details
                     class="mb-4"
                 ></v-select>
-                <v-text-field v-model="subDirectory" label="サブディレクトリ (任意)" hint="例: ドラマ/2026" persistent-hint></v-text-field>
+                <v-combobox
+                    v-model="subDirectory"
+                    :items="subDirectorySuggestions"
+                    label="サブディレクトリ (任意)"
+                    hint="過去の移動先から選択するか、新しいパスを入力"
+                    persistent-hint
+                    clearable
+                ></v-combobox>
                 <div v-if="isSubmitting && targetItems.length > 1" class="mt-3">
                     <v-progress-linear :value="progressPercent" height="8"></v-progress-linear>
                     <div class="caption mt-1">{{ progressCurrent }} / {{ targetItems.length }} 件処理中</div>
@@ -61,6 +68,21 @@ export default class MoveToExternalDialog extends Vue {
     public subDirectory: string = '';
     public isSubmitting: boolean = false;
     public progressCurrent: number = 0;
+    public history: apid.ExternalStorageMoveHistoryItem[] = [];
+
+    get subDirectorySuggestions(): string[] {
+        if (this.selectedStorageName === null) return [];
+        const seen = new Set<string>();
+        const out: string[] = [];
+        for (const h of this.history) {
+            if (h.storageName !== this.selectedStorageName) continue;
+            if (h.subDirectory.length === 0) continue;
+            if (seen.has(h.subDirectory)) continue;
+            seen.add(h.subDirectory);
+            out.push(h.subDirectory);
+        }
+        return out;
+    }
 
     private externalStorageApi = container.get<IExternalStorageApiModel>('IExternalStorageApiModel');
     private recordedApi = container.get<IRecordedApiModel>('IRecordedApiModel');
@@ -98,7 +120,7 @@ export default class MoveToExternalDialog extends Vue {
     @Watch('isOpen')
     public async onOpen(newVal: boolean): Promise<void> {
         if (newVal === true) {
-            await this.loadStorages();
+            await Promise.all([this.loadStorages(), this.loadHistory()]);
             this.subDirectory = '';
             this.progressCurrent = 0;
             if (this.storageOptions.length === 1 && this.selectedStorageName === null) {
@@ -117,6 +139,15 @@ export default class MoveToExternalDialog extends Vue {
             }));
         } catch (err) {
             this.snackbar.open({ color: 'error', text: '外部ストレージ一覧の取得に失敗' });
+        }
+    }
+
+    public async loadHistory(): Promise<void> {
+        try {
+            const h = await this.externalStorageApi.getHistory(10);
+            this.history = h.items;
+        } catch (err) {
+            this.history = [];
         }
     }
 

@@ -174,6 +174,28 @@ export default class RecordedDB implements IRecordedDB {
     }
 
     /**
+     * 最近移動された externalPath 一覧を重複排除して新しい順で返す
+     */
+    public async findRecentExternalPaths(limit: number): Promise<string[]> {
+        const connection = await this.op.getConnection();
+        const rows = await this.promieRetry.run(() => {
+            return connection
+                .getRepository(Recorded)
+                .createQueryBuilder('r')
+                .select('r.externalPath', 'externalPath')
+                .addSelect('MAX(r.id)', 'maxId')
+                .where('r.externalPath IS NOT NULL')
+                .groupBy('r.externalPath')
+                .orderBy('maxId', 'DESC')
+                .limit(limit)
+                .getRawMany();
+        });
+        return rows
+            .map(r => r.externalPath as string)
+            .filter((p): p is string => typeof p === 'string' && p.length > 0);
+    }
+
+    /**
      * externalPath が oldPrefix の場合または oldPrefix + '/' で始まる場合、newPrefix に置換する
      * (外部ストレージのディレクトリリネーム用)
      */

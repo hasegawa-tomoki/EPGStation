@@ -22,6 +22,7 @@ export default interface IRecordedDB {
     changeProtect(recordedId: apid.RecordedId, isProtect: boolean): Promise<void>;
     setExternalPath(recordedId: apid.RecordedId, externalPath: string | null): Promise<void>;
     updateExternalPathPrefix(oldPrefix: string, newPrefix: string): Promise<void>;
+    findRecentExternalPaths(limit: number): Promise<string[]>;
     deleteOnce(recordedId: apid.RecordedId): Promise<void>;
     findId(recordedId: apid.RecordedId): Promise<Recorded | null>;
     findIds(recordedIds: apid.RecordedId[]): Promise<Recorded[]>;

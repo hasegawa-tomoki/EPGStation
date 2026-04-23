@@ -815,6 +815,21 @@ export interface RenameExternalStorageOption {
 }
 
 /**
+ * 移動履歴 1 エントリ
+ */
+export interface ExternalStorageMoveHistoryItem {
+    storageName: string;
+    subDirectory: string;
+}
+
+/**
+ * 移動履歴 (新しい順・重複排除済)
+ */
+export interface ExternalStorageMoveHistory {
+    items: ExternalStorageMoveHistoryItem[];
+}
+
+/**
  * バージョン情報
  */
 export interface VersionInfo {

@@ -207,4 +207,37 @@ export default class ExternalStorageApiModel implements IExternalStorageApiModel
             await this.videoFileDB.updateExternalStorageFilePath(storage.name, oldRel, newRel);
         }
     }
+
+    /**
+     * 最近の移動先 (externalPath) を config.externalStorage と突き合わせて
+     * {storageName, subDirectory} に分解して返す (重複排除・新しい順)
+     */
+    public async getHistory(limit: number): Promise<apid.ExternalStorageMoveHistory> {
+        const storages = this.config.externalStorage ?? [];
+        if (storages.length === 0) {
+            return { items: [] };
+        }
+
+        // 先に path 長い順にソート (prefix マッチで最も長い storage を優先)
+        const sortedStorages = [...storages].sort((a, b) => b.path.length - a.path.length);
+
+        const paths = await this.recordedDB.findRecentExternalPaths(Math.max(1, Math.min(limit, 50)));
+        const items: apid.ExternalStorageMoveHistoryItem[] = [];
+        const seen = new Set<string>();
+        for (const fullPath of paths) {
+            const storage = sortedStorages.find(s => fullPath === s.path || fullPath.startsWith(s.path + '/'));
+            if (typeof storage === 'undefined') {
+                continue;
+            }
+            let subDirectory = '';
+            if (fullPath !== storage.path) {
+                subDirectory = fullPath.slice(storage.path.length + 1); // 先頭の '/' を除く
+            }
+            const key = `${storage.name}::${subDirectory}`;
+            if (seen.has(key)) continue;
+            seen.add(key);
+            items.push({ storageName: storage.name, subDirectory });
+        }
+        return { items };
+    }
 }

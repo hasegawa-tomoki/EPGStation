@@ -1647,6 +1647,29 @@ components:
                     type: string
                     nullable: true
 
+        ExternalStorageMoveHistoryItem:
+            description: 移動履歴 1 エントリ
+            type: object
+            required:
+                - storageName
+                - subDirectory
+            properties:
+                storageName:
+                    type: string
+                subDirectory:
+                    type: string
+
+        ExternalStorageMoveHistory:
+            description: 移動履歴 (新しい順・重複排除済)
+            type: object
+            required:
+                - items
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/ExternalStorageMoveHistoryItem'
+
         RenameExternalStorageOption:
             description: 外部ストレージ上のファイル/ディレクトリをリネームする際のオプション
             type: object
