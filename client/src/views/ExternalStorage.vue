@@ -61,7 +61,7 @@
                                 <td>
                                     <div>{{ item.name }}</div>
                                     <div v-if="item.recordedIds && item.recordedIds.length > 0" class="mt-1">
-                                        <v-chip v-for="rid in item.recordedIds" :key="rid" x-small label color="primary" outlined class="mr-1" v-on:click.stop="gotoRecorded(rid)">
+                                        <v-chip v-for="rid in item.recordedIds" :key="rid" x-small label color="grey lighten-3" class="mr-1" v-on:click.stop="gotoRecorded(rid)">
                                             {{ recordedNameMap[rid] || '録画 #' + rid }}
                                         </v-chip>
                                     </div>
