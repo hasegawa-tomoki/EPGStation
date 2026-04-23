@@ -170,6 +170,18 @@ export default class VideoFileDB implements IVideoFileDB {
     }
 
     /**
+     * 外部ストレージに属する VideoFile を全件返す
+     */
+    public async findByExternalStorage(externalStorageName: string): Promise<VideoFile[]> {
+        const connection = await this.op.getConnection();
+        const qb = connection
+            .getRepository(VideoFile)
+            .createQueryBuilder('v')
+            .where('v.externalStorageName = :name', { name: externalStorageName });
+        return await this.promieRetry.run(() => qb.getMany());
+    }
+
+    /**
      * ファイルサイズ更新
      * @param videoFileId: video file id
      * @param size: file size

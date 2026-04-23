@@ -106,30 +106,69 @@ export default class ExternalStorageApiModel implements IExternalStorageApiModel
             return a.name.localeCompare(b.name);
         });
 
-        // 現在ディレクトリに移動された Recorded を列挙
-        const recordeds = await this.recordedDB.findByExternalPath(resolvedTarget);
-        const related: apid.ExternalStorageRelatedRecorded[] = recordeds.map(r => {
+        // このストレージ配下の VideoFile を全件取得し、filePath → recordedId のマップを作る
+        // (Phase 2a 以降、移動時に VideoFile レコードを保持し externalStorageName + filePath を持たせている)
+        const vfs = await this.videoFileDB.findByExternalStorage(storage.name);
+        const filePathToRecordedIds = new Map<string, Set<number>>();
+        const recordedIdSet = new Set<number>();
+        for (const v of vfs) {
+            let set = filePathToRecordedIds.get(v.filePath);
+            if (!set) {
+                set = new Set<number>();
+                filePathToRecordedIds.set(v.filePath, set);
+            }
+            set.add(v.recordedId);
+            recordedIdSet.add(v.recordedId);
+        }
+
+        // 紐付く Recorded のメタデータを取得して relatedRecordeds を組み立てる
+        // (relatedRecordeds は「このディレクトリに直接移動された」Recorded + VideoFile 経由で
+        //  紐付く Recorded の和集合。UI 側で id→name 解決に使う)
+        const related: apid.ExternalStorageRelatedRecorded[] = [];
+        const addedRecordedIds = new Set<number>();
+
+        // ディレクトリそのものとして移動された Recorded を先に列挙
+        const directRecordeds = await this.recordedDB.findByExternalPath(resolvedTarget);
+        for (const r of directRecordeds) {
             const thumbs = r.thumbnails ?? [];
-            return {
+            related.push({
                 id: r.id,
                 name: r.name,
                 thumbnailId: thumbs.length > 0 ? thumbs[0].id : undefined,
-            };
-        });
+            });
+            addedRecordedIds.add(r.id);
+        }
 
-        // ファイル名に Recorded.name が含まれていれば紐付ける (best-effort マッチ)
+        // 各ファイルエントリに recordedIds を完全一致で割り当てる
+        const subPathPrefix = normalizedSub.length > 0 ? normalizedSub + '/' : '';
+        const fileBoundRecordedIds = new Set<number>();
         for (const item of items) {
             if (item.type !== 'file') {
                 continue;
             }
-            const base = item.name.replace(/\.[^.]+$/, '');
-            for (const r of recordeds) {
-                if (r.name.length > 0 && base.indexOf(r.name) !== -1) {
-                    if (typeof item.recordedIds === 'undefined') {
-                        item.recordedIds = [];
-                    }
-                    item.recordedIds.push(r.id);
+            const relPath = subPathPrefix + item.name;
+            const matches = filePathToRecordedIds.get(relPath);
+            if (matches && matches.size > 0) {
+                item.recordedIds = Array.from(matches).sort((a, b) => a - b);
+                for (const id of item.recordedIds) {
+                    fileBoundRecordedIds.add(id);
                 }
+            }
+        }
+
+        // ファイル紐付けで出てきたがまだ related に含まれていない Recorded を追加
+        const missingIds = Array.from(fileBoundRecordedIds).filter(id => !addedRecordedIds.has(id));
+        if (missingIds.length > 0) {
+            for (const id of missingIds) {
+                const rec = await this.recordedDB.findId(id);
+                if (rec === null) continue;
+                const thumbs = rec.thumbnails ?? [];
+                related.push({
+                    id: rec.id,
+                    name: rec.name,
+                    thumbnailId: thumbs.length > 0 ? thumbs[0].id : undefined,
+                });
+                addedRecordedIds.add(rec.id);
             }
         }
 
