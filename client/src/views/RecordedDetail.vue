@@ -26,7 +26,7 @@
                         </div>
                         <div class="content-description">
                             <div class="title font-weight-bold d-flex align-center">
-                                <v-chip v-if="recorded.display.isExternal === true" small label color="orange lighten-3" class="mr-2">
+                                <v-chip v-if="recorded.display.isExternal === true" small label color="orange lighten-3" class="mr-2 flex-shrink-0">
                                     <v-icon small left>mdi-nas</v-icon>
                                     NAS
                                 </v-chip>

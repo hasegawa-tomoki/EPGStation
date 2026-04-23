@@ -10,7 +10,7 @@
         ></v-img>
         <div class="pa-2" v-on:click="gotoDetail">
             <div class="d-flex align-center">
-                <v-chip v-if="item.display.isExternal === true" x-small label color="orange lighten-3" class="mr-2">
+                <v-chip v-if="item.display.isExternal === true" x-small label color="orange lighten-3" class="mr-2 flex-shrink-0">
                     <v-icon x-small left>mdi-nas</v-icon>
                     NAS
                 </v-chip>
