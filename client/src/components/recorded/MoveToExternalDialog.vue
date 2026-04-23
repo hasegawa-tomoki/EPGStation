@@ -168,10 +168,7 @@ export default class MoveToExternalDialog extends Vue {
             });
             this.snackbar.open({
                 color: 'success',
-                text:
-                    ids.length === 1
-                        ? '移動ジョブを登録しました'
-                        : `移動ジョブを登録しました (${ids.length} 件)`,
+                text: ids.length === 1 ? '移動ジョブを登録しました' : `移動ジョブを登録しました (${ids.length} 件)`,
             });
             this.dialogModel = false;
             this.$emit('moved', job.id);
