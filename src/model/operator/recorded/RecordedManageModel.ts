@@ -698,22 +698,18 @@ export default class RecordedManageModel implements IRecordedManageModel {
         const targetDir = subDir.length > 0 ? path.join(storage.path, subDir) : storage.path;
         await mkdirp(targetDir);
 
-        // 移動先で衝突する名前を先に検出
+        // 移動対象は VideoFile (TS / エンコード済の両方) のみ。
+        // Thumbnail は移動せず EPGStation 管理下のディレクトリに残し、
+        // UI から引き続き表示できるようにする。
         const videoFiles = recorded.videoFiles ?? [];
-        const thumbnails = recorded.thumbnails ?? [];
-        const allSrcDests: { src: string; dest: string; kind: 'video' | 'thumbnail'; id: number }[] = [];
+        const allSrcDests: { src: string; dest: string; id: number }[] = [];
         for (const v of videoFiles) {
             const src = await this.videoUtil.getFullFilePathFromId(v.id);
             if (src === null) {
                 throw new Error('SrcVideoPathNotResolved');
             }
             const dest = path.join(targetDir, path.basename(v.filePath));
-            allSrcDests.push({ src, dest, kind: 'video', id: v.id });
-        }
-        for (const t of thumbnails) {
-            const src = path.join(this.config.thumbnail, t.filePath);
-            const dest = path.join(targetDir, path.basename(t.filePath));
-            allSrcDests.push({ src, dest, kind: 'thumbnail', id: t.id });
+            allSrcDests.push({ src, dest, id: v.id });
         }
         for (const sd of allSrcDests) {
             try {
@@ -728,7 +724,7 @@ export default class RecordedManageModel implements IRecordedManageModel {
         }
 
         // 実移動: copy → unlink、エラー時はすでに移動済みのファイルをロールバック(best effort)
-        const moved: { src: string; dest: string; kind: 'video' | 'thumbnail'; id: number }[] = [];
+        const moved: { src: string; dest: string; id: number }[] = [];
         try {
             for (const sd of allSrcDests) {
                 await FileUtil.move(sd.src, sd.dest);
@@ -744,15 +740,10 @@ export default class RecordedManageModel implements IRecordedManageModel {
             throw err;
         }
 
-        // DB 更新: VideoFile / Thumbnail 削除、Recorded.externalPath 設定
+        // DB 更新: VideoFile 削除 (Thumbnail は保持)、Recorded.externalPath 設定
         for (const v of videoFiles) {
             await this.videoFileDB.deleteOnce(v.id).catch(e => {
                 this.log.system.error(`failed to delete videoFile ${v.id}: ${e.message}`);
-            });
-        }
-        for (const t of thumbnails) {
-            await this.thumbnailDB.deleteOnce(t.id).catch(e => {
-                this.log.system.error(`failed to delete thumbnail ${t.id}: ${e.message}`);
             });
         }
 
