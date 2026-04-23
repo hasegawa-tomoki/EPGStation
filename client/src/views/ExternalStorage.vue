@@ -93,7 +93,7 @@
                     <v-card-title>リネーム</v-card-title>
                     <v-card-text>
                         <div class="body-2 mb-2 path-break">{{ renameTargetSubPath }}</div>
-                        <v-text-field v-model="renameNewName" label="新しい名前" autofocus></v-text-field>
+                        <v-text-field v-model="renameNewName" label="新しい名前" autofocus v-on:keydown.enter="onEnterRename"></v-text-field>
                     </v-card-text>
                     <v-card-actions>
                         <v-spacer></v-spacer>
@@ -109,7 +109,7 @@
                     <v-card-title>新規フォルダ</v-card-title>
                     <v-card-text>
                         <div class="body-2 text--secondary mb-2 path-break">作成先: {{ list ? list.subPath || '/' : '' }}</div>
-                        <v-text-field v-model="mkdirFolderName" label="フォルダ名" autofocus></v-text-field>
+                        <v-text-field v-model="mkdirFolderName" label="フォルダ名" autofocus v-on:keydown.enter="onEnterMkdir"></v-text-field>
                     </v-card-text>
                     <v-card-actions>
                         <v-spacer></v-spacer>
@@ -344,6 +344,20 @@ export default class ExternalStorage extends Vue {
     public openMkdirDialog(): void {
         this.mkdirFolderName = '';
         this.mkdirDialogOpen = true;
+    }
+
+    /**
+     * IME の変換確定 Enter を除外して submit を呼び出す。
+     * keyCode=229 は IME 変換中、isComposing=true は変換未確定。
+     */
+    public onEnterMkdir(event: KeyboardEvent): void {
+        if (event.isComposing || event.keyCode === 229) return;
+        if (this.canSubmitMkdir) this.submitMkdir();
+    }
+
+    public onEnterRename(event: KeyboardEvent): void {
+        if (event.isComposing || event.keyCode === 229) return;
+        if (this.canSubmitRename) this.submitRename();
     }
 
     public async submitMkdir(): Promise<void> {
