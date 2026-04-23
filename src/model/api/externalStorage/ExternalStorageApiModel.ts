@@ -248,6 +248,104 @@ export default class ExternalStorageApiModel implements IExternalStorageApiModel
     }
 
     /**
+     * 現在位置配下に新しいディレクトリを作成する
+     */
+    public async mkdir(storageName: string, parentSubPath: string, folderName: string): Promise<void> {
+        const storage = this.resolveStorage(storageName);
+        const parent = this.normalizeSubPath(parentSubPath);
+        if (
+            folderName.length === 0 ||
+            folderName.indexOf('/') !== -1 ||
+            folderName.indexOf('\\') !== -1 ||
+            folderName === '.' ||
+            folderName === '..'
+        ) {
+            throw new Error('InvalidFolderName');
+        }
+
+        const parentFull = parent.length > 0 ? path.join(storage.path, parent) : storage.path;
+        const target = path.join(parentFull, folderName);
+        const resolvedRoot = path.resolve(storage.path);
+        const resolvedTarget = path.resolve(target);
+        if (!resolvedTarget.startsWith(resolvedRoot + path.sep)) {
+            throw new Error('InvalidSubPath');
+        }
+
+        // 既存チェック
+        try {
+            await fs.promises.stat(resolvedTarget);
+            throw new Error('DestinationAlreadyExists');
+        } catch (err: any) {
+            if (err.message === 'DestinationAlreadyExists') throw err;
+        }
+
+        await fs.promises.mkdir(resolvedTarget);
+        this.log.system.info(`mkdir external: ${resolvedTarget}`);
+    }
+
+    /**
+     * 同一外部ストレージ内でファイルを別ディレクトリへ移動する (ディレクトリ不可)。
+     * 同一 FS 内なので fs.rename で atomic 、DB の VideoFile.filePath も同期更新。
+     */
+    public async relocate(storageName: string, subPath: string, targetDir: string): Promise<void> {
+        const storage = this.resolveStorage(storageName);
+        const srcRel = this.normalizeSubPath(subPath);
+        const dstDirRel = this.normalizeSubPath(targetDir);
+        if (srcRel.length === 0) {
+            throw new Error('InvalidSubPath');
+        }
+
+        const srcFull = path.join(storage.path, srcRel);
+        const dstDirFull = dstDirRel.length > 0 ? path.join(storage.path, dstDirRel) : storage.path;
+
+        const resolvedRoot = path.resolve(storage.path);
+        const resolvedSrc = path.resolve(srcFull);
+        const resolvedDstDir = path.resolve(dstDirFull);
+        if (!resolvedSrc.startsWith(resolvedRoot + path.sep)) {
+            throw new Error('InvalidSubPath');
+        }
+        if (resolvedDstDir !== resolvedRoot && !resolvedDstDir.startsWith(resolvedRoot + path.sep)) {
+            throw new Error('InvalidTargetDir');
+        }
+
+        // src はファイルであること
+        const srcStat = await fs.promises.stat(resolvedSrc);
+        if (!srcStat.isFile()) {
+            throw new Error('RelocateSourceMustBeFile');
+        }
+        // dstDir が存在しディレクトリ
+        const dstDirStat = await fs.promises.stat(resolvedDstDir);
+        if (!dstDirStat.isDirectory()) {
+            throw new Error('TargetDirIsNotDirectory');
+        }
+
+        const baseName = path.basename(srcRel);
+        const newSubPath = dstDirRel.length > 0 ? `${dstDirRel}/${baseName}` : baseName;
+        const resolvedNew = path.resolve(path.join(storage.path, newSubPath));
+
+        if (resolvedNew === resolvedSrc) {
+            // 同じ場所への移動はノーオペ
+            return;
+        }
+
+        // 衝突チェック
+        try {
+            await fs.promises.stat(resolvedNew);
+            throw new Error('DestinationAlreadyExists');
+        } catch (err: any) {
+            if (err.message === 'DestinationAlreadyExists') throw err;
+        }
+
+        await fs.promises.rename(resolvedSrc, resolvedNew);
+        this.log.system.info(`relocated external: ${resolvedSrc} -> ${resolvedNew}`);
+
+        // VideoFile 完全一致レコードがあれば filePath を更新
+        await this.videoFileDB
+            .updateExternalStorageFilePath(storage.name, srcRel, newSubPath)
+            .catch(e => this.log.system.error(`failed to update VideoFile filePath: ${e.message}`));
+    }
+
+    /**
      * 最近の移動先 (externalPath) を config.externalStorage と突き合わせて
      * {storageName, subDirectory} に分解して返す (重複排除・新しい順)
      */

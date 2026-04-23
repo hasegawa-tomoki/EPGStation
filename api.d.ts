@@ -817,6 +817,22 @@ export interface RenameExternalStorageOption {
 }
 
 /**
+ * 外部ストレージにフォルダを作成
+ */
+export interface ExternalStorageMkdirOption {
+    parentSubPath?: string;
+    folderName: string;
+}
+
+/**
+ * 外部ストレージ内でファイルを別フォルダへ移動
+ */
+export interface ExternalStorageRelocateOption {
+    subPath: string;
+    targetDir?: string;
+}
+
+/**
  * 外部ストレージ一括移動ジョブ登録オプション
  */
 export interface ExternalStorageMoveJobSubmitOption {

@@ -1767,6 +1767,30 @@ components:
                     items:
                         $ref: '#/components/schemas/ExternalStorageMoveHistoryItem'
 
+        ExternalStorageMkdirOption:
+            description: 外部ストレージに新規フォルダを作成
+            type: object
+            required:
+                - folderName
+            properties:
+                parentSubPath:
+                    type: string
+                folderName:
+                    type: string
+
+        ExternalStorageRelocateOption:
+            description: 外部ストレージ内でファイルを別ディレクトリへ移動
+            type: object
+            required:
+                - subPath
+            properties:
+                subPath:
+                    description: 移動対象ファイルの storage 相対パス
+                    type: string
+                targetDir:
+                    description: 移動先ディレクトリの storage 相対パス (root は空文字)
+                    type: string
+
         RenameExternalStorageOption:
             description: 外部ストレージ上のファイル/ディレクトリをリネームする際のオプション
             type: object

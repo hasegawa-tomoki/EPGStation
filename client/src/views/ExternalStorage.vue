@@ -18,14 +18,20 @@
                     v-on:change="onStorageChange"
                 ></v-select>
 
-                <!-- Breadcrumb -->
-                <v-breadcrumbs :items="breadcrumbs" class="pa-0">
-                    <template v-slot:item="{ item }">
-                        <v-breadcrumbs-item :href="item.href" :disabled="item.disabled" v-on:click.prevent="navigate(item.subPath)">
-                            {{ item.text }}
-                        </v-breadcrumbs-item>
-                    </template>
-                </v-breadcrumbs>
+                <!-- Breadcrumb + 新規フォルダ -->
+                <div class="d-flex align-center">
+                    <v-breadcrumbs :items="breadcrumbs" class="pa-0 flex-grow-1">
+                        <template v-slot:item="{ item }">
+                            <v-breadcrumbs-item :href="item.href" :disabled="item.disabled" v-on:click.prevent="navigate(item.subPath)">
+                                {{ item.text }}
+                            </v-breadcrumbs-item>
+                        </template>
+                    </v-breadcrumbs>
+                    <v-btn small text v-on:click="openMkdirDialog">
+                        <v-icon small left>mdi-folder-plus-outline</v-icon>
+                        新規フォルダ
+                    </v-btn>
+                </div>
 
                 <!-- ファイル/ディレクトリ一覧 -->
                 <v-card v-if="list" class="mt-2">
@@ -63,9 +69,14 @@
                                 <td class="text-right">{{ item.type === 'dir' ? '' : formatSize(item.size) }}</td>
                                 <td>{{ formatMtime(item.mtime) }}</td>
                                 <td>
-                                    <v-btn icon small v-on:click.stop="openRenameDialog(item)">
-                                        <v-icon small>mdi-pencil</v-icon>
-                                    </v-btn>
+                                    <div class="d-flex">
+                                        <v-btn v-if="item.type === 'file'" icon small title="別フォルダへ移動" v-on:click.stop="openRelocateDialog(item)">
+                                            <v-icon small>mdi-folder-move-outline</v-icon>
+                                        </v-btn>
+                                        <v-btn icon small title="リネーム" v-on:click.stop="openRenameDialog(item)">
+                                            <v-icon small>mdi-pencil</v-icon>
+                                        </v-btn>
+                                    </div>
                                 </td>
                             </tr>
                             <tr v-if="list.items.length === 0 && list.subPath.length === 0">
@@ -88,6 +99,41 @@
                         <v-spacer></v-spacer>
                         <v-btn text v-on:click="renameDialogOpen = false">キャンセル</v-btn>
                         <v-btn color="primary" :disabled="!canSubmitRename || isRenaming" :loading="isRenaming" v-on:click="submitRename">変更</v-btn>
+                    </v-card-actions>
+                </v-card>
+            </v-dialog>
+
+            <!-- 新規フォルダダイアログ -->
+            <v-dialog v-model="mkdirDialogOpen" max-width="500">
+                <v-card>
+                    <v-card-title>新規フォルダ</v-card-title>
+                    <v-card-text>
+                        <div class="body-2 text--secondary mb-2 path-break">作成先: {{ list ? list.subPath || '/' : '' }}</div>
+                        <v-text-field v-model="mkdirFolderName" label="フォルダ名" autofocus></v-text-field>
+                    </v-card-text>
+                    <v-card-actions>
+                        <v-spacer></v-spacer>
+                        <v-btn text v-on:click="mkdirDialogOpen = false">キャンセル</v-btn>
+                        <v-btn color="primary" :disabled="!canSubmitMkdir || isMkdir" :loading="isMkdir" v-on:click="submitMkdir">作成</v-btn>
+                    </v-card-actions>
+                </v-card>
+            </v-dialog>
+
+            <!-- ファイル移動ダイアログ -->
+            <v-dialog v-model="relocateDialogOpen" max-width="900" width="90%">
+                <v-card>
+                    <v-card-title>フォルダへ移動</v-card-title>
+                    <v-card-text>
+                        <div class="body-2 path-break mb-3">対象: {{ relocateTargetSubPath }}</div>
+                        <v-radio-group v-model="relocateTargetDir" column>
+                            <v-radio v-for="opt in relocateOptions" :key="opt.value" :value="opt.value" :label="opt.label"></v-radio>
+                        </v-radio-group>
+                        <div v-if="relocateOptions.length === 0" class="body-2 text--disabled">移動先候補がありません (親フォルダもサブフォルダも無し)</div>
+                    </v-card-text>
+                    <v-card-actions>
+                        <v-spacer></v-spacer>
+                        <v-btn text v-on:click="relocateDialogOpen = false">キャンセル</v-btn>
+                        <v-btn color="primary" :disabled="!canSubmitRelocate || isRelocating" :loading="isRelocating" v-on:click="submitRelocate">移動</v-btn>
                     </v-card-actions>
                 </v-card>
             </v-dialog>
@@ -128,9 +174,55 @@ export default class ExternalStorage extends Vue {
     public renameNewName: string = '';
     public isRenaming: boolean = false;
 
+    public mkdirDialogOpen: boolean = false;
+    public mkdirFolderName: string = '';
+    public isMkdir: boolean = false;
+
+    public relocateDialogOpen: boolean = false;
+    public relocateTarget: apid.ExternalStorageFileEntry | null = null;
+    public relocateTargetDir: string | null = null;
+    public isRelocating: boolean = false;
+
     get renameTargetSubPath(): string {
         if (this.renameTarget === null) return '';
         return this.currentSubPath.length > 0 ? `${this.currentSubPath}/${this.renameTarget.name}` : this.renameTarget.name;
+    }
+
+    get canSubmitMkdir(): boolean {
+        const t = this.mkdirFolderName.trim();
+        if (t.length === 0) return false;
+        if (t.indexOf('/') !== -1 || t.indexOf('\\') !== -1) return false;
+        if (t === '.' || t === '..') return false;
+        return true;
+    }
+
+    get relocateTargetSubPath(): string {
+        if (this.relocateTarget === null) return '';
+        return this.currentSubPath.length > 0 ? `${this.currentSubPath}/${this.relocateTarget.name}` : this.relocateTarget.name;
+    }
+
+    get relocateOptions(): { label: string; value: string }[] {
+        const opts: { label: string; value: string }[] = [];
+        // 親フォルダ
+        if (this.currentSubPath.length > 0) {
+            const parts = this.currentSubPath.split('/').filter(p => p.length > 0);
+            parts.pop();
+            const parent = parts.join('/');
+            opts.push({ label: '.. (親フォルダ: ' + (parent || '/') + ')', value: parent });
+        }
+        // 現在のフォルダ配下のサブフォルダ
+        if (this.list) {
+            for (const item of this.list.items) {
+                if (item.type !== 'dir') continue;
+                const path = this.currentSubPath.length > 0 ? `${this.currentSubPath}/${item.name}` : item.name;
+                opts.push({ label: item.name + ' (' + path + ')', value: path });
+            }
+        }
+        return opts;
+    }
+
+    get canSubmitRelocate(): boolean {
+        return this.relocateTarget !== null && typeof this.relocateTargetDir === 'string';
     }
 
     get canSubmitRename(): boolean {
@@ -247,6 +339,54 @@ export default class ExternalStorage extends Vue {
         this.renameTarget = item;
         this.renameNewName = item.name;
         this.renameDialogOpen = true;
+    }
+
+    public openMkdirDialog(): void {
+        this.mkdirFolderName = '';
+        this.mkdirDialogOpen = true;
+    }
+
+    public async submitMkdir(): Promise<void> {
+        if (!this.canSubmitMkdir || this.selectedStorage === null) return;
+        this.isMkdir = true;
+        try {
+            await this.api.mkdir(this.selectedStorage, {
+                parentSubPath: this.currentSubPath,
+                folderName: this.mkdirFolderName.trim(),
+            });
+            this.snackbar.open({ color: 'success', text: 'フォルダを作成しました' });
+            this.mkdirDialogOpen = false;
+            await this.reload();
+        } catch (err: any) {
+            this.snackbar.open({ color: 'error', text: `作成失敗: ${err?.response?.data?.message ?? err.message ?? ''}` });
+        } finally {
+            this.isMkdir = false;
+        }
+    }
+
+    public openRelocateDialog(item: apid.ExternalStorageFileEntry): void {
+        this.relocateTarget = item;
+        this.relocateTargetDir = null;
+        this.relocateDialogOpen = true;
+    }
+
+    public async submitRelocate(): Promise<void> {
+        if (!this.canSubmitRelocate || this.relocateTarget === null || this.selectedStorage === null || this.relocateTargetDir === null) return;
+        this.isRelocating = true;
+        try {
+            await this.api.relocate(this.selectedStorage, {
+                subPath: this.relocateTargetSubPath,
+                targetDir: this.relocateTargetDir,
+            });
+            this.snackbar.open({ color: 'success', text: '移動しました' });
+            this.relocateDialogOpen = false;
+            this.relocateTarget = null;
+            await this.reload();
+        } catch (err: any) {
+            this.snackbar.open({ color: 'error', text: `移動失敗: ${err?.response?.data?.message ?? err.message ?? ''}` });
+        } finally {
+            this.isRelocating = false;
+        }
     }
 
     public async submitRename(): Promise<void> {

@@ -29,6 +29,14 @@ export default class ExternalStorageApiModel implements IExternalStorageApiModel
         await this.repository.post(`/externalStorages/${encodeURIComponent(storageName)}/rename`, option);
     }
 
+    public async mkdir(storageName: string, option: apid.ExternalStorageMkdirOption): Promise<void> {
+        await this.repository.post(`/externalStorages/${encodeURIComponent(storageName)}/mkdir`, option);
+    }
+
+    public async relocate(storageName: string, option: apid.ExternalStorageRelocateOption): Promise<void> {
+        await this.repository.post(`/externalStorages/${encodeURIComponent(storageName)}/relocate`, option);
+    }
+
     public async getHistory(limit: number = 10): Promise<apid.ExternalStorageMoveHistory> {
         const result = await this.repository.get('/externalStorages/history', { params: { limit } });
         return result.data;
