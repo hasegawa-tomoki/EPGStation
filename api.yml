@@ -1916,6 +1916,20 @@ components:
             schema:
                 type: boolean
 
+        QueryIsInternal:
+            description: 内部ストレージ (EPGStation 管理) の録画を対象にするか
+            name: isInternal
+            in: query
+            schema:
+                type: boolean
+
+        QueryIsExternal:
+            description: 外部ストレージ (NAS 等) に移動済みの録画を対象にするか
+            name: isExternal
+            in: query
+            schema:
+                type: boolean
+
         QueryName:
             description: name
             name: name

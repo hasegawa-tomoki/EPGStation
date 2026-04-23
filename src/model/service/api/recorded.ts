@@ -35,6 +35,12 @@ export const get: Operation = async (req, res) => {
         if (typeof req.query.hasOriginalFile !== 'undefined') {
             option.hasOriginalFile = req.query.hasOriginalFile as any;
         }
+        if (typeof req.query.isInternal !== 'undefined') {
+            option.isInternal = req.query.isInternal as any;
+        }
+        if (typeof req.query.isExternal !== 'undefined') {
+            option.isExternal = req.query.isExternal as any;
+        }
 
         api.responseJSON(res, 200, await recordedApiModel.gets(option));
     } catch (err: any) {
@@ -73,6 +79,12 @@ get.apiDoc = {
         },
         {
             $ref: '#/components/parameters/QueryHasOriginalFile',
+        },
+        {
+            $ref: '#/components/parameters/QueryIsInternal',
+        },
+        {
+            $ref: '#/components/parameters/QueryIsExternal',
         },
     ],
     responses: {

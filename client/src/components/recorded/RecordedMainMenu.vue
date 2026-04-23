@@ -9,10 +9,10 @@
             <v-list>
                 <v-list-item v-on:click="edit">
                     <v-list-item-icon class="mr-3">
-                        <v-icon>mdi-pencil</v-icon>
+                        <v-icon>mdi-checkbox-multiple-marked-outline</v-icon>
                     </v-list-item-icon>
                     <v-list-item-content>
-                        <v-list-item-title>編集</v-list-item-title>
+                        <v-list-item-title>選択</v-list-item-title>
                     </v-list-item-content>
                 </v-list-item>
 

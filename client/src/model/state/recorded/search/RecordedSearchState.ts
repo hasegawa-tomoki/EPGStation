@@ -11,6 +11,8 @@ import IRecordedSearchState, { SelectorItem } from './IRecordedSearchState';
 class RecordedSearchState implements IRecordedSearchState {
     public keyword: string | undefined;
     public hasOriginalFile: boolean = false;
+    public isInternal: boolean = true;
+    public isExternal: boolean = true;
     public ruleId: apid.RuleId | null | undefined = null;
     public channelId: apid.ChannelId | undefined;
     public genre: apid.ProgramGenreLv1 | undefined;
@@ -103,6 +105,8 @@ class RecordedSearchState implements IRecordedSearchState {
         this.setItems();
         this.keyword = undefined;
         this.hasOriginalFile = false;
+        this.isInternal = true;
+        this.isExternal = true;
         this.ruleId = null;
         this.channelId = undefined;
         this.genre = undefined;

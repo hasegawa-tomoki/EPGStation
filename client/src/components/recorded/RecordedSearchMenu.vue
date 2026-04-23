@@ -30,6 +30,8 @@
                     <div class="check-boxes">
                         <v-checkbox v-model="searchState.hasOriginalFile" label="元ファイルを含む" class="mt-2"></v-checkbox>
                         <v-checkbox v-model="isNoRule" label="手動録画のみ" class="mt-2"></v-checkbox>
+                        <v-checkbox v-model="searchState.isInternal" label="内部対象" class="mt-2"></v-checkbox>
+                        <v-checkbox v-model="searchState.isExternal" label="NAS 対象" class="mt-2"></v-checkbox>
                     </div>
                 </div>
                 <v-divider></v-divider>
@@ -103,6 +105,15 @@ export default class RecordedSearchMenu extends Vue {
             if (this.searchState.hasOriginalFile === true) {
                 searchQuery.hasOriginalFile = true;
             }
+            // 片方のみチェックの場合だけ絞り込みを適用する
+            // (両方 ON / 両方 OFF は絞り込みなし = クエリに含めない)
+            if (this.searchState.isInternal !== this.searchState.isExternal) {
+                if (this.searchState.isInternal === true) {
+                    searchQuery.isInternal = true;
+                } else {
+                    searchQuery.isExternal = true;
+                }
+            }
 
             await Util.move(this.$router, {
                 path: '/recorded',
@@ -161,6 +172,16 @@ export default class RecordedSearchMenu extends Vue {
             }
             if (typeof this.$route.query.hasOriginalFile !== 'undefined') {
                 this.searchState.hasOriginalFile = (this.$route.query.hasOriginalFile as any) === true || this.$route.query.hasOriginalFile === 'true';
+            }
+            // 絞り込みが未指定なら「両方 ON」(= 絞り込みなし)をデフォルトに
+            const qInternal = this.$route.query.isInternal;
+            const qExternal = this.$route.query.isExternal;
+            if (typeof qInternal === 'undefined' && typeof qExternal === 'undefined') {
+                this.searchState.isInternal = true;
+                this.searchState.isExternal = true;
+            } else {
+                this.searchState.isInternal = qInternal === 'true' || (qInternal as any) === true;
+                this.searchState.isExternal = qExternal === 'true' || (qExternal as any) === true;
             }
 
             // キーワードにフォーカスを当てる

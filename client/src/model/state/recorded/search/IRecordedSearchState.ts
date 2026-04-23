@@ -8,6 +8,8 @@ export interface SelectorItem {
 export default interface IRecordedSearchState {
     keyword: string | undefined;
     hasOriginalFile: boolean;
+    isInternal: boolean;
+    isExternal: boolean;
     ruleId: apid.RuleId | null | undefined;
     channelId: apid.ChannelId | undefined;
     genre: apid.ProgramGenreLv1 | undefined;

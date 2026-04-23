@@ -451,6 +451,22 @@ export default class RecordedDB implements IRecordedDB {
             });
         }
 
+        // 内部/外部ストレージでの絞り込み
+        // 両方 true または両方 undefined/false の場合はフィルタなし
+        const wantInternal = option.isInternal === true || (option.isInternal as any) === 'true';
+        const wantExternal = option.isExternal === true || (option.isExternal as any) === 'true';
+        if (wantInternal && !wantExternal) {
+            querys.push({
+                query: 'recorded.externalPath is null',
+                values: {},
+            });
+        } else if (!wantInternal && wantExternal) {
+            querys.push({
+                query: 'recorded.externalPath is not null',
+                values: {},
+            });
+        }
+
         // where セット
         for (const q of querys) {
             queryBuilder = queryBuilder.andWhere(q.query, q.values);

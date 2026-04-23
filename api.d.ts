@@ -429,6 +429,8 @@ export interface GetRecordedOption {
     genre?: ProgramGenreLv1;
     keyword?: string;
     hasOriginalFile?: boolean;
+    isInternal?: boolean;
+    isExternal?: boolean;
 }
 
 /**

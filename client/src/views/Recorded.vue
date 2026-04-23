@@ -266,6 +266,12 @@ export default class Recorded extends Vue {
         if (typeof this.$route.query.hasOriginalFile !== 'undefined') {
             option.hasOriginalFile = (this.$route.query.hasOriginalFile as any) === true || this.$route.query.hasOriginalFile === 'true';
         }
+        if (typeof this.$route.query.isInternal !== 'undefined') {
+            option.isInternal = (this.$route.query.isInternal as any) === true || this.$route.query.isInternal === 'true';
+        }
+        if (typeof this.$route.query.isExternal !== 'undefined') {
+            option.isExternal = (this.$route.query.isExternal as any) === true || this.$route.query.isExternal === 'true';
+        }
 
         return option;
     }
