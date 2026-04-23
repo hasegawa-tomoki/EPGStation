@@ -19,6 +19,8 @@ export interface RecordedDisplayData {
         hasDrop: boolean;
         ruleId?: apid.RuleId;
         ruleName?: string;
+        isExternal: boolean;
+        externalPath?: string;
     };
     recordedItem: apid.RecordedItem;
     isSelected: boolean;

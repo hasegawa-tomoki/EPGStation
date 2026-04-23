@@ -35,6 +35,8 @@ export default class RecordedUtil implements IRecordedUtil {
                 thumbnails: item.thumbnails,
                 videoFiles: item.videoFiles,
                 hasDrop: false,
+                isExternal: typeof item.externalPath === 'string' && item.externalPath.length > 0,
+                externalPath: item.externalPath,
             },
             recordedItem: item,
             isSelected: false,

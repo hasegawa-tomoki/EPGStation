@@ -4,7 +4,11 @@ import * as apid from '../../../api';
 import { OperatorFinishEncodeInfo } from '../event/IOperatorEncodeEvent';
 import ILogger from '../ILogger';
 import ILoggerModel from '../ILoggerModel';
-import { AddVideoFileOption, UploadedVideoFileOption } from '../operator/recorded/IRecordedManageModel';
+import {
+    AddVideoFileOption,
+    MoveToExternalStorageOption,
+    UploadedVideoFileOption,
+} from '../operator/recorded/IRecordedManageModel';
 import IEncodeManageModel from '../service/encode/IEncodeManageModel';
 import ISocketIOManageModel from '../service/socketio/ISocketIOManageModel';
 import IIPCClient, {
@@ -313,6 +317,18 @@ export default class IPCClient implements IIPCClient {
                         func: RecordedFunctions.dropLogFileCleanup,
                     },
                     0, // タイムアウトなし
+                );
+            },
+            moveToExternalStorage: (option: MoveToExternalStorageOption) => {
+                return this.send(
+                    {
+                        model: ModelName.recorded,
+                        func: RecordedFunctions.moveToExternalStorage,
+                        args: {
+                            option: option,
+                        },
+                    },
+                    30 * 60 * 1000, // タイムアウトを 30 分に延長 (NAS コピーが大容量ファイルで時間がかかる想定)
                 );
             },
         };

@@ -1,5 +1,5 @@
 import * as apid from '../../../../api';
-import { UploadedVideoFileOption } from '../../operator/recorded/IRecordedManageModel';
+import { MoveToExternalStorageOption, UploadedVideoFileOption } from '../../operator/recorded/IRecordedManageModel';
 
 export default interface IRecordedApiModel {
     gets(option: apid.GetRecordedOption): Promise<apid.Records>;
@@ -11,4 +11,5 @@ export default interface IRecordedApiModel {
     fileCleanup(): Promise<void>;
     addUploadedVideoFile(option: UploadedVideoFileOption): Promise<void>;
     createNewRecorded(option: apid.CreateNewRecordedOption): Promise<apid.RecordedId>;
+    moveToExternalStorage(option: MoveToExternalStorageOption): Promise<void>;
 }

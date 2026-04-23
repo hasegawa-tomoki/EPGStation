@@ -39,6 +39,10 @@ export default class RecordedItemUtil implements IRecordedItemUtil {
             }
         }
 
+        if (typeof recorded.externalPath === 'string' && recorded.externalPath.length > 0) {
+            item.externalPath = recorded.externalPath;
+        }
+
         if (recorded.programId !== null) {
             item.programId = recorded.programId;
         }

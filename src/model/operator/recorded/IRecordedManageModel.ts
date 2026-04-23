@@ -21,6 +21,12 @@ export interface UploadedVideoFileOption {
     filePath: string; // ファイルパス (アップロード先)
 }
 
+export interface MoveToExternalStorageOption {
+    recordedId: apid.RecordedId;
+    storageName: string; // config.externalStorage の name
+    subDirectory?: string | null; // storage パス配下のサブディレクトリ (null/empty なら root)
+}
+
 export default interface IRecordedManageModel {
     delete(recordedId: apid.RecordedId): Promise<void>;
     updateVideoFileSize(videoFileId: apid.VideoFileId): Promise<void>;
@@ -33,4 +39,5 @@ export default interface IRecordedManageModel {
     videoFileCleanup(): Promise<void>;
     dropLogFileCleanup(): Promise<void>;
     removeRuleId(ruleId: apid.RuleId): Promise<void>;
+    moveToExternalStorage(option: MoveToExternalStorageOption): Promise<void>;
 }

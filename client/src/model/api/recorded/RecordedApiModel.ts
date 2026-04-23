@@ -104,4 +104,14 @@ export default class RecordedApiModel implements IRecordedApiModel {
     public async cleanup(): Promise<void> {
         await this.repository.post('/recorded/cleanup');
     }
+
+    /**
+     * 録画を外部ストレージ (NAS) へ移動する
+     * @param recordedId: apid.RecordedId
+     * @param option: apid.MoveToExternalStorageOption
+     * @return Promise<void>
+     */
+    public async moveToExternalStorage(recordedId: apid.RecordedId, option: apid.MoveToExternalStorageOption): Promise<void> {
+        await this.repository.post(`/recorded/${recordedId}/move-external`, option);
+    }
 }

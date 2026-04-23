@@ -1,0 +1,14 @@
+/* eslint-disable max-len */
+import { MigrationInterface, QueryRunner } from 'typeorm';
+
+export class AddExternalPath1777000000000 implements MigrationInterface {
+    name = 'AddExternalPath1777000000000';
+
+    public async up(queryRunner: QueryRunner): Promise<void> {
+        await queryRunner.query(`ALTER TABLE "recorded" ADD "externalPath" text NULL`);
+    }
+
+    public async down(queryRunner: QueryRunner): Promise<void> {
+        await queryRunner.query(`ALTER TABLE "recorded" DROP COLUMN "externalPath"`);
+    }
+}

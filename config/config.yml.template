@@ -30,6 +30,12 @@ recorded:
     - name: recorded
       path: '%ROOT%/recorded'
 
+## 外部ストレージ (NAS 等) — 録画済み番組の移動先 (管理外アーカイブ)
+## マウント済み絶対パスを指定する。物理移動なのでファイルシステム上でアクセス可能である必要あり
+# externalStorage:
+#     - name: langley
+#       path: /mnt/smb/langley/media/テレビ録画
+
 thumbnail: '%ROOT%/thumbnail'
 thumbnailSize: 480x270
 thumbnailPosition: 5

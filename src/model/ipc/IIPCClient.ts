@@ -1,6 +1,10 @@
 import * as apid from '../../../api';
 import { OperatorFinishEncodeInfo } from '../event/IOperatorEncodeEvent';
-import { AddVideoFileOption, UploadedVideoFileOption } from '../operator/recorded/IRecordedManageModel';
+import {
+    AddVideoFileOption,
+    MoveToExternalStorageOption,
+    UploadedVideoFileOption,
+} from '../operator/recorded/IRecordedManageModel';
 
 export interface IPCReservationManageModel {
     getBroadcastStatus(): Promise<apid.BroadcastStatus>;
@@ -25,6 +29,7 @@ export interface IPCRecordedManageModel {
     changeProtect(recordedId: apid.RecordedId, isProtect: boolean): Promise<void>;
     videoFileCleanup(): Promise<void>;
     dropLogFileCleanup(): Promise<void>;
+    moveToExternalStorage(option: MoveToExternalStorageOption): Promise<void>;
 }
 
 export interface IPCRecordedTagManageModel {

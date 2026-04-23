@@ -3,7 +3,7 @@ import * as apid from '../../../../api';
 import IRecordedDB, { FindAllOption } from '../../db/IRecordedDB';
 import IRuleDB from '../../db/IRuleDB';
 import IIPCClient from '../../ipc/IIPCClient';
-import { UploadedVideoFileOption } from '../../operator/recorded/IRecordedManageModel';
+import { MoveToExternalStorageOption, UploadedVideoFileOption } from '../../operator/recorded/IRecordedManageModel';
 import IEncodeManageModel from '../../service/encode/IEncodeManageModel';
 import IRecordedItemUtil, { RuleKeywordIndex } from '../IRecordedItemUtil';
 import IRecordedApiModel from './IRecordedApiModel';
@@ -34,9 +34,7 @@ export default class RecordedApiModel implements IRecordedApiModel {
      * Recorded 配列に含まれる ruleId の keyword を bulk で取得する
      */
     private async buildRuleKeywordIndex(ruleIds: (number | null | undefined)[]): Promise<RuleKeywordIndex> {
-        const uniqueIds = Array.from(
-            new Set(ruleIds.filter((id): id is number => typeof id === 'number')),
-        );
+        const uniqueIds = Array.from(new Set(ruleIds.filter((id): id is number => typeof id === 'number')));
         const index: RuleKeywordIndex = {};
         await Promise.all(
             uniqueIds.map(async id => {
@@ -165,5 +163,14 @@ export default class RecordedApiModel implements IRecordedApiModel {
      */
     public async createNewRecorded(option: apid.CreateNewRecordedOption): Promise<apid.RecordedId> {
         return await this.ipc.recorded.createNewRecorded(option);
+    }
+
+    /**
+     * 録画番組を外部ストレージに移動する (物理ファイル移動 + DB 更新)
+     * @param option: MoveToExternalStorageOption
+     * @return Promise<void>
+     */
+    public async moveToExternalStorage(option: MoveToExternalStorageOption): Promise<void> {
+        await this.ipc.recorded.moveToExternalStorage(option);
     }
 }

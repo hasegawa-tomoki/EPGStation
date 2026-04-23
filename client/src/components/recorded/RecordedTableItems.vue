@@ -13,7 +13,10 @@
                 </thead>
                 <tbody>
                     <tr v-for="item in items" v-bind:key="item.id" v-on:click="gotoDetail(item)" v-bind:class="{ 'selected-color': item.isSelected === true }">
-                        <td>{{ item.display.name }}</td>
+                        <td>
+                            <v-chip v-if="item.display.isExternal === true" x-small label color="orange lighten-3" class="mr-1">NAS</v-chip>
+                            {{ item.display.name }}
+                        </td>
                         <td>{{ item.display.channelName }}</td>
                         <td>{{ item.display.shortTime }} ({{ item.display.duration }} m)</td>
                         <td class="rule">

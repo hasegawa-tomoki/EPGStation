@@ -10,4 +10,5 @@ export default interface IRecordedApiModel {
     unprotect(recordedId: apid.RecordedId): Promise<void>;
     createNewRecorded(option: apid.CreateNewRecordedOption): Promise<apid.RecordedId>;
     cleanup(): Promise<void>;
+    moveToExternalStorage(recordedId: apid.RecordedId, option: apid.MoveToExternalStorageOption): Promise<void>;
 }

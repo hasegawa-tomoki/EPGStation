@@ -25,8 +25,12 @@
                             ></v-img>
                         </div>
                         <div class="content-description">
-                            <div class="title font-weight-bold">
+                            <div class="title font-weight-bold d-flex align-center">
+                                <v-chip v-if="recorded.display.isExternal === true" small label color="orange lighten-3" class="mr-2">NAS</v-chip>
                                 {{ recorded.display.name }}
+                            </div>
+                            <div v-if="recorded.display.isExternal === true" class="subtitle-2 font-weight-light external-path">
+                                外部ストレージ: {{ recorded.display.externalPath }}
                             </div>
                             <div class="subtitle-1 my-1">
                                 {{ recorded.display.channelName }}

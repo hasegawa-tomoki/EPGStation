@@ -1023,6 +1023,9 @@ components:
                 ruleName:
                     description: 録画ルール名 (Rule.keyword)。手動予約や参照先ルール削除時は未定義
                     type: string
+                externalPath:
+                    description: 外部ストレージに移動済みの場合、移動先ディレクトリの絶対パス
+                    type: string
                 programId:
                     $ref: '#/components/schemas/ProgramId'
                 channelId:
@@ -1542,6 +1545,45 @@ components:
                     type: array
                     items:
                         $ref: '#/components/schemas/StorageItem'
+
+        ExternalStorageItem:
+            description: 外部ストレージ (config.yml の externalStorage 配下 1 エントリ)
+            type: object
+            required:
+                - name
+                - path
+            properties:
+                name:
+                    description: 表示名 / 識別子
+                    type: string
+                path:
+                    description: マウント済み絶対パス
+                    type: string
+
+        ExternalStorageList:
+            description: 外部ストレージ一覧
+            type: object
+            required:
+                - items
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/ExternalStorageItem'
+
+        MoveToExternalStorageOption:
+            description: 録画を外部ストレージに移動する際のオプション
+            type: object
+            required:
+                - storageName
+            properties:
+                storageName:
+                    description: 移動先外部ストレージの name
+                    type: string
+                subDirectory:
+                    description: 保存先サブディレクトリ (ストレージ root 直下に置きたい場合は省略)
+                    type: string
+                    nullable: true
 
         Error:
             type: object

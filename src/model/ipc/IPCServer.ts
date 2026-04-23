@@ -4,6 +4,7 @@ import * as apid from '../../../api';
 import IOperatorEncodeEvent, { OperatorFinishEncodeInfo } from '../event/IOperatorEncodeEvent';
 import IRecordedManageModel, {
     AddVideoFileOption,
+    MoveToExternalStorageOption,
     UploadedVideoFileOption,
 } from '../operator/recorded/IRecordedManageModel';
 import IRecordedTagManadeModel from '../operator/recordedTag/IRecordedTagManadeModel';
@@ -282,6 +283,13 @@ export default class IPCServer implements IIPCServer {
         // dropLogFileCleanup
         index[RecordedFunctions.dropLogFileCleanup] = async () => {
             await this.recordedManage.dropLogFileCleanup();
+        };
+
+        // moveToExternalStorage
+        index[RecordedFunctions.moveToExternalStorage] = async msg => {
+            const option = this.getArgsValue<MoveToExternalStorageOption>(msg, 'option');
+
+            await this.recordedManage.moveToExternalStorage(option);
         };
 
         return index;

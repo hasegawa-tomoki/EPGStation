@@ -154,6 +154,26 @@ export default class RecordedDB implements IRecordedDB {
     }
 
     /**
+     * externalPath を設定する
+     * @param recordedId: apid.RecordedId
+     * @param externalPath: string | null
+     * @return Promise<void>
+     */
+    public async setExternalPath(recordedId: apid.RecordedId, externalPath: string | null): Promise<void> {
+        const connection = await this.op.getConnection();
+        const queryBuilder = connection
+            .createQueryBuilder()
+            .update(Recorded)
+            .set({
+                externalPath: externalPath,
+            })
+            .where({ id: recordedId });
+        await this.promieRetry.run(() => {
+            return queryBuilder.execute();
+        });
+    }
+
+    /**
      * 保護状態を変更する
      * @param recordedId: apid.RecordedId
      * @param isProtect: boolean

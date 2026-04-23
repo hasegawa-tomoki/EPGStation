@@ -20,7 +20,11 @@ import IConfiguration from '../../IConfiguration';
 import ILogger from '../../ILogger';
 import ILoggerModel from '../../ILoggerModel';
 import IRecordingManageModel from '../recording/IRecordingManageModel';
-import IRecordedManageModel, { AddVideoFileOption, UploadedVideoFileOption } from './IRecordedManageModel';
+import IRecordedManageModel, {
+    AddVideoFileOption,
+    MoveToExternalStorageOption,
+    UploadedVideoFileOption,
+} from './IRecordedManageModel';
 import IRecordingUtilModel from '../recording/IRecordingUtilModel';
 
 @injectable()
@@ -651,5 +655,109 @@ export default class RecordedManageModel implements IRecordedManageModel {
      */
     public async removeRuleId(ruleId: apid.RuleId): Promise<void> {
         await this.recordedDB.removeRuleId(ruleId);
+    }
+
+    /**
+     * 録画番組を外部ストレージ (NAS 等) に移動する
+     * - 物理ファイル(TS / エンコード / サムネイル) を target ディレクトリに copy + unlink
+     * - VideoFile / Thumbnail レコードは削除
+     * - Recorded.externalPath に target ディレクトリの絶対パスを設定
+     * - DropLogFile は小さいので EPGStation 側に残す
+     */
+    public async moveToExternalStorage(option: MoveToExternalStorageOption): Promise<void> {
+        this.log.system.info(`move to external storage: ${JSON.stringify(option)}`);
+
+        // storage の検証
+        const storages = this.config.externalStorage ?? [];
+        const storage = storages.find(s => s.name === option.storageName);
+        if (typeof storage === 'undefined') {
+            throw new Error('ExternalStorageNotFound');
+        }
+
+        // subDirectory の path traversal ガード
+        const subDir = (option.subDirectory ?? '').replace(/^\/+|\/+$/g, '');
+        if (subDir.split('/').some(part => part === '..' || part === '.')) {
+            throw new Error('InvalidSubDirectory');
+        }
+
+        // Recorded 取得 (videoFiles / thumbnails 込み)
+        const recorded = await this.recordedDB.findId(option.recordedId);
+        if (recorded === null) {
+            throw new Error('RecordedIdIsNotFound');
+        }
+        if (recorded.isRecording === true) {
+            throw new Error('RecordedIsRecording');
+        }
+        if (recorded.isProtected === true) {
+            throw new Error('RecordedIsProtected');
+        }
+        if (typeof recorded.externalPath === 'string' && recorded.externalPath.length > 0) {
+            throw new Error('RecordedAlreadyMoved');
+        }
+
+        const targetDir = subDir.length > 0 ? path.join(storage.path, subDir) : storage.path;
+        await mkdirp(targetDir);
+
+        // 移動先で衝突する名前を先に検出
+        const videoFiles = recorded.videoFiles ?? [];
+        const thumbnails = recorded.thumbnails ?? [];
+        const allSrcDests: { src: string; dest: string; kind: 'video' | 'thumbnail'; id: number }[] = [];
+        for (const v of videoFiles) {
+            const src = await this.videoUtil.getFullFilePathFromId(v.id);
+            if (src === null) {
+                throw new Error('SrcVideoPathNotResolved');
+            }
+            const dest = path.join(targetDir, path.basename(v.filePath));
+            allSrcDests.push({ src, dest, kind: 'video', id: v.id });
+        }
+        for (const t of thumbnails) {
+            const src = path.join(this.config.thumbnail, t.filePath);
+            const dest = path.join(targetDir, path.basename(t.filePath));
+            allSrcDests.push({ src, dest, kind: 'thumbnail', id: t.id });
+        }
+        for (const sd of allSrcDests) {
+            try {
+                await FileUtil.stat(sd.dest);
+                throw new Error(`DestinationAlreadyExists: ${sd.dest}`);
+            } catch (err: any) {
+                // 存在しない場合 stat は失敗する → OK
+                if (err.message && err.message.startsWith('DestinationAlreadyExists')) {
+                    throw err;
+                }
+            }
+        }
+
+        // 実移動: copy → unlink、エラー時はすでに移動済みのファイルをロールバック(best effort)
+        const moved: { src: string; dest: string; kind: 'video' | 'thumbnail'; id: number }[] = [];
+        try {
+            for (const sd of allSrcDests) {
+                await FileUtil.move(sd.src, sd.dest);
+                moved.push(sd);
+            }
+        } catch (err: any) {
+            this.log.system.error(`move failed, rolling back: ${err.message}`);
+            for (const m of moved) {
+                await FileUtil.move(m.dest, m.src).catch(e => {
+                    this.log.system.error(`rollback failed for ${m.dest}: ${e.message}`);
+                });
+            }
+            throw err;
+        }
+
+        // DB 更新: VideoFile / Thumbnail 削除、Recorded.externalPath 設定
+        for (const v of videoFiles) {
+            await this.videoFileDB.deleteOnce(v.id).catch(e => {
+                this.log.system.error(`failed to delete videoFile ${v.id}: ${e.message}`);
+            });
+        }
+        for (const t of thumbnails) {
+            await this.thumbnailDB.deleteOnce(t.id).catch(e => {
+                this.log.system.error(`failed to delete thumbnail ${t.id}: ${e.message}`);
+            });
+        }
+
+        await this.recordedDB.setExternalPath(option.recordedId, targetDir);
+
+        this.log.system.info(`moved recorded ${option.recordedId} to ${targetDir}`);
     }
 }

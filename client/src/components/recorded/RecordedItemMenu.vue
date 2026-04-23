@@ -55,6 +55,17 @@
                         <v-list-item-title>stop</v-list-item-title>
                     </v-list-item-content>
                 </v-list-item>
+                <v-list-item
+                    v-if="recordedItem.isRecording === false && recordedItem.isEncoding === false && typeof recordedItem.externalPath === 'undefined'"
+                    v-on:click="openMoveToExternalDialog"
+                >
+                    <v-list-item-icon class="mr-3">
+                        <v-icon>mdi-folder-move-outline</v-icon>
+                    </v-list-item-icon>
+                    <v-list-item-content>
+                        <v-list-item-title>move to external</v-list-item-title>
+                    </v-list-item-content>
+                </v-list-item>
                 <v-list-item v-on:click="openDeleteDialog">
                     <v-list-item-icon class="mr-3">
                         <v-icon>mdi-delete</v-icon>
@@ -68,11 +79,13 @@
         <div v-if="isOpened === true" class="menu-background" v-on:click="onClickMenuBackground"></div>
         <AddEncodeDialog :isOpen.sync="isOpenEncodeDialog" :recordedItem="recordedItem"></AddEncodeDialog>
         <RecordedDeleteDialog :isOpen.sync="isOpenDeleteDialog" :recordedItem="recordedItem"></RecordedDeleteDialog>
+        <MoveToExternalDialog :isOpen.sync="isOpenMoveToExternalDialog" :recordedItem="recordedItem"></MoveToExternalDialog>
     </div>
 </template>
 
 <script lang="ts">
 import AddEncodeDialog from '@/components/encode/AddEncodeDialog.vue';
+import MoveToExternalDialog from '@/components/recorded/MoveToExternalDialog.vue';
 import RecordedDeleteDialog from '@/components/recorded/RecordedDeleteDialog.vue';
 import IRecordedApiModel from '@/model/api/recorded/IRecordedApiModel';
 import container from '@/model/ModelContainer';
@@ -86,6 +99,7 @@ import * as apid from '../../../../api';
 @Component({
     components: {
         AddEncodeDialog,
+        MoveToExternalDialog,
         RecordedDeleteDialog,
     },
 })
@@ -98,6 +112,7 @@ export default class RecordedItemMenu extends Vue {
     public isOpened: boolean = false;
     public isOpenDeleteDialog: boolean = false;
     public isOpenEncodeDialog: boolean = false;
+    public isOpenMoveToExternalDialog: boolean = false;
 
     public serverConfig: IServerConfigModel = container.get<IServerConfigModel>('IServerConfigModel');
     public recordedApiModel = container.get<IRecordedApiModel>('IRecordedApiModel');
@@ -182,6 +197,11 @@ export default class RecordedItemMenu extends Vue {
     public async openEncodeDialog(): Promise<void> {
         await Util.sleep(300);
         this.isOpenEncodeDialog = true;
+    }
+
+    public async openMoveToExternalDialog(): Promise<void> {
+        await Util.sleep(300);
+        this.isOpenMoveToExternalDialog = true;
     }
 
     public onClickMenuBackground(e: Event): boolean {

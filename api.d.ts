@@ -354,6 +354,7 @@ export interface RecordedItem {
     id: RecordedId;
     ruleId?: RuleId;
     ruleName?: string;
+    externalPath?: string;
     programId?: ProgramId;
     channelId: ChannelId;
     startAt: UnixtimeMS;
@@ -750,6 +751,29 @@ export interface StorageItem extends DiskUsage {
  */
 export interface StorageInfo {
     items: StorageItem[];
+}
+
+/**
+ * 外部ストレージ (config.yml の externalStorage 配下 1 エントリ)
+ */
+export interface ExternalStorageItem {
+    name: string;
+    path: string;
+}
+
+/**
+ * 外部ストレージ一覧
+ */
+export interface ExternalStorageList {
+    items: ExternalStorageItem[];
+}
+
+/**
+ * 録画を外部ストレージに移動する際のオプション (HTTP body)
+ */
+export interface MoveToExternalStorageOption {
+    storageName: string;
+    subDirectory?: string | null;
 }
 
 /**

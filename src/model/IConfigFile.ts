@@ -17,6 +17,11 @@ export interface RecordedDirInfo {
     limitCmd?: string; // 空き容量限界値を超えたときに実行するコマンド
 }
 
+export interface ExternalStorageInfo {
+    name: string; // 表示名 / 識別子
+    path: string; // マウント済み絶対パス
+}
+
 export interface URLSchemeInfo {
     ios?: string;
     android?: string;
@@ -109,6 +114,9 @@ export default interface IConfigFile {
     recorded: RecordedDirInfo[];
     // 録画一時ディレクトリ
     recordedTmp?: string;
+
+    // 外部ストレージ (NAS 等) — 移動先として指定可能、管理外アーカイブ用
+    externalStorage?: ExternalStorageInfo[];
 
     // 録画履歴保存期間
     recordedHistoryRetentionPeriodDays: number;

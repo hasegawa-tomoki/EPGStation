@@ -21,6 +21,8 @@ import IScheduleApiModel from './api/schedule/IScheduleApiModel';
 import ScheduleApiModel from './api/schedule/ScheduleApiModel';
 import IStorageApiModel from './api/storage/IStorageApiModel';
 import StorageApiModel from './api/storage/StorageApiModel';
+import IExternalStorageApiModel from './api/externalStorage/IExternalStorageApiModel';
+import ExternalStorageApiModel from './api/externalStorage/ExternalStorageApiModel';
 import IStreamApiModel from './api/streams/IStreamApiModel';
 import StreamApiModel from './api/streams/StreamApiModel';
 import IThumbnailApiModel from './api/thumbnail/IThumbnailApiModel';
@@ -157,6 +159,7 @@ export default (container: Container): void => {
     container.bind<IDropLogApiModel>('IDropLogApiModel').to(DropLogApiModel).inSingletonScope();
 
     container.bind<IStorageApiModel>('IStorageApiModel').to(StorageApiModel).inSingletonScope();
+    container.bind<IExternalStorageApiModel>('IExternalStorageApiModel').to(ExternalStorageApiModel).inSingletonScope();
 
     container.bind<IVersionApiModel>('IVersionApiModel').to(VersionApiModel).inSingletonScope();
 

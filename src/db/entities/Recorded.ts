@@ -185,6 +185,12 @@ export default class Recorded extends BaseEntity {
     @Column()
     public isRecording!: boolean;
 
+    @Column({
+        type: 'text',
+        nullable: true,
+    })
+    public externalPath?: string | null; // 外部ストレージに移動済み場合、移動先ディレクトリの絶対パス。null なら EPGStation 管理下
+
     @OneToMany(() => VideoFile, videoFile => videoFile.recorded)
     public videoFiles?: VideoFile[];
 
