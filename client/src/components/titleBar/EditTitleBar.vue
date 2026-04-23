@@ -8,6 +8,9 @@
         <v-btn icon v-on:click="onSelectAll">
             <v-icon>mdi-select-all</v-icon>
         </v-btn>
+        <v-btn v-if="enableMoveExternal" icon v-on:click="onMoveExternal" title="外部ストレージへ移動">
+            <v-icon>mdi-folder-move-outline</v-icon>
+        </v-btn>
         <v-btn icon v-on:click="onDelete">
             <v-icon>mdi-delete</v-icon>
         </v-btn>
@@ -26,6 +29,9 @@ export default class EditTitleBar extends Vue {
 
     @Prop({ required: true })
     public isEditMode!: boolean;
+
+    @Prop({ required: false, default: false })
+    public enableMoveExternal!: boolean;
 
     public navigationState: INavigationState = container.get<INavigationState>('INavigationState');
 
@@ -67,6 +73,13 @@ export default class EditTitleBar extends Vue {
      */
     public onDelete(): void {
         this.$emit('delete');
+    }
+
+    /**
+     * 外部ストレージへ移動
+     */
+    public onMoveExternal(): void {
+        this.$emit('moveExternal');
     }
 }
 </script>

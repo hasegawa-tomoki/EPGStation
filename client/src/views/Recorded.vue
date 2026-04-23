@@ -4,9 +4,11 @@
             v-if="isEditMode === true"
             :title="selectedTitle"
             :isEditMode.sync="isEditMode"
+            :enableMoveExternal="true"
             v-on:exit="onFinishEdit"
             v-on:selectall="onSelectAll"
             v-on:delete="onMultiplueDeletion"
+            v-on:moveExternal="onBulkMoveExternal"
         ></EditTitleBar>
         <TitleBar v-else title="録画済み">
             <template v-slot:menu>
@@ -37,6 +39,7 @@
             :total="recordedState.getSelectedCnt().cnt"
             v-on:delete="onExecuteMultiplueDeletion"
         ></RecordedMultipleDeletionDialog>
+        <MoveToExternalDialog :isOpen.sync="isOpenMoveExternalDialog" :recordedItems="bulkMoveItems" v-on:moved="onBulkMoved"></MoveToExternalDialog>
         <RecordedCleanupDialog :isOpen.sync="isOpenCleanupDialog"></RecordedCleanupDialog>
     </v-main>
 </template>
@@ -44,6 +47,7 @@
 <script lang="ts">
 import Pagination from '@/components/pagination/Pagination.vue';
 import RecordedCleanupDialog from '@/components/recorded/RecordedCleanupDialog.vue';
+import MoveToExternalDialog from '@/components/recorded/MoveToExternalDialog.vue';
 import RecordedItems from '@/components/recorded/RecordedItems.vue';
 import RecordedMainMenu from '@/components/recorded/RecordedMainMenu.vue';
 import RecordedMultipleDeletionDialog from '@/components/recorded/RecordedMultipleDeletionDialog.vue';
@@ -73,12 +77,15 @@ Component.registerHooks(['beforeRouteUpdate', 'beforeRouteLeave']);
         Pagination,
         RecordedMultipleDeletionDialog,
         RecordedCleanupDialog,
+        MoveToExternalDialog,
     },
 })
 export default class Recorded extends Vue {
     public isEditMode: boolean = false;
     public isOpenMultiplueDeletionDialog: boolean = false;
     public isOpenCleanupDialog: boolean = false;
+    public isOpenMoveExternalDialog: boolean = false;
+    public bulkMoveItems: apid.RecordedItem[] = [];
 
     private isVisibilityHidden: boolean = false;
     private recordedState: IRecordedState = container.get<IRecordedState>('IRecordedState');
@@ -185,6 +192,28 @@ export default class Recorded extends Vue {
 
     public onCleanup(): void {
         this.isOpenCleanupDialog = true;
+    }
+
+    public onBulkMoveExternal(): void {
+        const selected: apid.RecordedItem[] = [];
+        for (const r of this.recordedState.getRecorded()) {
+            if (r.isSelected === true) {
+                selected.push(r.recordedItem);
+            }
+        }
+        if (selected.length === 0) {
+            this.snackbarState.open({ color: 'info', text: '移動対象が選択されていません' });
+            return;
+        }
+        this.bulkMoveItems = selected;
+        this.isOpenMoveExternalDialog = true;
+    }
+
+    public async onBulkMoved(_movedIds: apid.RecordedId[]): Promise<void> {
+        this.isEditMode = false;
+        this.bulkMoveItems = [];
+        this.recordedState.clearSelect();
+        await this.recordedState.fetchData(this.createFetchDataOption()).catch(() => {});
     }
 
     @Watch('$route', { immediate: true, deep: true })
