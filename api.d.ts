@@ -815,6 +815,44 @@ export interface RenameExternalStorageOption {
 }
 
 /**
+ * 外部ストレージ一括移動ジョブ登録オプション
+ */
+export interface ExternalStorageMoveJobSubmitOption {
+    recordedIds: RecordedId[];
+    storageName: string;
+    subDirectory?: string | null;
+}
+
+export interface ExternalStorageMoveJobError {
+    recordedId: RecordedId;
+    message: string;
+}
+
+/**
+ * 外部ストレージ移動ジョブ
+ */
+export interface ExternalStorageMoveJob {
+    id: string;
+    storageName: string;
+    subDirectory?: string | null;
+    recordedIds: RecordedId[];
+    status: 'pending' | 'running' | 'completed' | 'cancelled' | 'error';
+    processed: number;
+    total: number;
+    currentRecordedId?: RecordedId | null;
+    successIds: RecordedId[];
+    errors: ExternalStorageMoveJobError[];
+    cancelRequested: boolean;
+    createdAt: number;
+    startedAt?: number | null;
+    finishedAt?: number | null;
+}
+
+export interface ExternalStorageMoveJobList {
+    items: ExternalStorageMoveJob[];
+}
+
+/**
  * 移動履歴 1 エントリ
  */
 export interface ExternalStorageMoveHistoryItem {

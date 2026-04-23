@@ -1647,6 +1647,103 @@ components:
                     type: string
                     nullable: true
 
+        ExternalStorageMoveJobSubmitOption:
+            description: 外部ストレージ一括移動ジョブ登録オプション
+            type: object
+            required:
+                - recordedIds
+                - storageName
+            properties:
+                recordedIds:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/RecordedId'
+                storageName:
+                    type: string
+                subDirectory:
+                    type: string
+                    nullable: true
+
+        ExternalStorageMoveJobError:
+            type: object
+            required:
+                - recordedId
+                - message
+            properties:
+                recordedId:
+                    $ref: '#/components/schemas/RecordedId'
+                message:
+                    type: string
+
+        ExternalStorageMoveJob:
+            description: 外部ストレージ移動ジョブ
+            type: object
+            required:
+                - id
+                - storageName
+                - recordedIds
+                - status
+                - processed
+                - total
+                - successIds
+                - errors
+                - cancelRequested
+                - createdAt
+            properties:
+                id:
+                    type: string
+                storageName:
+                    type: string
+                subDirectory:
+                    type: string
+                    nullable: true
+                recordedIds:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/RecordedId'
+                status:
+                    type: string
+                    enum: [pending, running, completed, cancelled, error]
+                processed:
+                    type: integer
+                total:
+                    type: integer
+                currentRecordedId:
+                    $ref: '#/components/schemas/RecordedId'
+                    nullable: true
+                successIds:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/RecordedId'
+                errors:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/ExternalStorageMoveJobError'
+                cancelRequested:
+                    type: boolean
+                createdAt:
+                    type: integer
+                    format: int64
+                startedAt:
+                    type: integer
+                    format: int64
+                    nullable: true
+                finishedAt:
+                    type: integer
+                    format: int64
+                    nullable: true
+
+        ExternalStorageMoveJobList:
+            description: 外部ストレージ移動ジョブ一覧
+            type: object
+            required:
+                - items
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/ExternalStorageMoveJob'
+
         ExternalStorageMoveHistoryItem:
             description: 移動履歴 1 エントリ
             type: object

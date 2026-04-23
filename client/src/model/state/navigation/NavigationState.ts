@@ -105,6 +105,13 @@ export default class NavigationState implements INavigationState {
             },
         });
         newItems.push({
+            icon: 'mdi-transit-transfer',
+            title: '移動ジョブ',
+            herf: {
+                path: '/external-storage/jobs',
+            },
+        });
+        newItems.push({
             icon: 'mdi-sync',
             title: 'エンコード',
             herf: {

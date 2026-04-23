@@ -33,4 +33,23 @@ export default class ExternalStorageApiModel implements IExternalStorageApiModel
         const result = await this.repository.get('/externalStorages/history', { params: { limit } });
         return result.data;
     }
+
+    public async submitMoveJob(option: apid.ExternalStorageMoveJobSubmitOption): Promise<apid.ExternalStorageMoveJob> {
+        const result = await this.repository.post('/externalStorages/move-jobs', option);
+        return result.data;
+    }
+
+    public async listMoveJobs(): Promise<apid.ExternalStorageMoveJobList> {
+        const result = await this.repository.get('/externalStorages/move-jobs');
+        return result.data;
+    }
+
+    public async getMoveJob(jobId: string): Promise<apid.ExternalStorageMoveJob> {
+        const result = await this.repository.get(`/externalStorages/move-jobs/${encodeURIComponent(jobId)}`);
+        return result.data;
+    }
+
+    public async cancelMoveJob(jobId: string): Promise<void> {
+        await this.repository.delete(`/externalStorages/move-jobs/${encodeURIComponent(jobId)}`);
+    }
 }

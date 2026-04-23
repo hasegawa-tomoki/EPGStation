@@ -7,6 +7,7 @@ import Dashboard from './views/Dashboard.vue';
 import Encode from './views/Encode.vue';
 import ExternalStorage from './views/ExternalStorage.vue';
 import Guide from './views/Guide.vue';
+import MoveJobs from './views/MoveJobs.vue';
 import GuideSizeSetting from './views/GuideSizeSetting.vue';
 import ManualReserve from './views/ManualReserve.vue';
 import OnAir from './views/OnAir.vue';
@@ -121,6 +122,11 @@ export default new Router({
             path: '/external-storage',
             name: 'external-storage',
             component: ExternalStorage,
+        },
+        {
+            path: '/external-storage/jobs',
+            name: 'external-storage-jobs',
+            component: MoveJobs,
         },
     ],
     scrollBehavior: async (_to: Route, _from: Route, savedPosition: Position | void): Promise<Position> => {

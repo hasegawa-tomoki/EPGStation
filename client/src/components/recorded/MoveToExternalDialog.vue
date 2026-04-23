@@ -44,7 +44,6 @@
 
 <script lang="ts">
 import IExternalStorageApiModel from '@/model/api/externalStorage/IExternalStorageApiModel';
-import IRecordedApiModel from '@/model/api/recorded/IRecordedApiModel';
 import container from '@/model/ModelContainer';
 import ISnackbarState from '@/model/state/snackbar/ISnackbarState';
 import { Component, Prop, Vue, Watch } from 'vue-property-decorator';
@@ -85,7 +84,6 @@ export default class MoveToExternalDialog extends Vue {
     }
 
     private externalStorageApi = container.get<IExternalStorageApiModel>('IExternalStorageApiModel');
-    private recordedApi = container.get<IRecordedApiModel>('IRecordedApiModel');
     private snackbar = container.get<ISnackbarState>('ISnackbarState');
 
     get dialogModel(): boolean {
@@ -160,39 +158,31 @@ export default class MoveToExternalDialog extends Vue {
 
         const storageName = this.selectedStorageName;
         const subDirectory = this.subDirectory.length > 0 ? this.subDirectory : null;
-        const movedIds: number[] = [];
-        const failures: { id: number; name: string; message: string }[] = [];
+        const ids = this.targetItems.map(i => i.id);
 
-        for (const item of this.targetItems) {
-            try {
-                await this.recordedApi.moveToExternalStorage(item.id, { storageName, subDirectory });
-                movedIds.push(item.id);
-            } catch (err: any) {
-                failures.push({
-                    id: item.id,
-                    name: item.name,
-                    message: err?.response?.data?.message ?? err.message ?? 'unknown',
-                });
-            }
-            this.progressCurrent++;
-        }
-
-        this.isSubmitting = false;
-
-        if (failures.length === 0) {
+        try {
+            const job = await this.externalStorageApi.submitMoveJob({
+                recordedIds: ids,
+                storageName,
+                subDirectory,
+            });
             this.snackbar.open({
                 color: 'success',
-                text: movedIds.length === 1 ? '外部ストレージへの移動が完了' : `外部ストレージへ ${movedIds.length} 件移動しました`,
+                text:
+                    ids.length === 1
+                        ? '移動ジョブを登録しました'
+                        : `移動ジョブを登録しました (${ids.length} 件)`,
             });
-        } else {
+            this.dialogModel = false;
+            this.$emit('moved', job.id);
+        } catch (err: any) {
             this.snackbar.open({
                 color: 'error',
-                text: `移動に一部失敗 (成功 ${movedIds.length} / 失敗 ${failures.length}): ${failures[0].name} - ${failures[0].message}`,
+                text: `ジョブ登録失敗: ${err?.response?.data?.message ?? err.message ?? ''}`,
             });
-            console.error('move failures', failures);
+        } finally {
+            this.isSubmitting = false;
         }
-        this.dialogModel = false;
-        this.$emit('moved', movedIds);
     }
 }
 </script>

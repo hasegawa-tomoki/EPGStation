@@ -209,11 +209,11 @@ export default class Recorded extends Vue {
         this.isOpenMoveExternalDialog = true;
     }
 
-    public async onBulkMoved(_movedIds: apid.RecordedId[]): Promise<void> {
+    public async onBulkMoved(_jobIdOrIds: string | apid.RecordedId[]): Promise<void> {
         this.isEditMode = false;
         this.bulkMoveItems = [];
         this.recordedState.clearSelect();
-        await this.recordedState.fetchData(this.createFetchDataOption()).catch(() => {});
+        Util.move(this.$router, { path: '/external-storage/jobs' }).catch(() => {});
     }
 
     @Watch('$route', { immediate: true, deep: true })

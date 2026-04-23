@@ -30,6 +30,8 @@ import IStorageApiModel from './api/storage/IStorageApiModel';
 import StorageApiModel from './api/storage/StorageApiModel';
 import IExternalStorageApiModel from './api/externalStorage/IExternalStorageApiModel';
 import ExternalStorageApiModel from './api/externalStorage/ExternalStorageApiModel';
+import IMoveJobManager from './service/externalStorageMove/IMoveJobManager';
+import MoveJobManager from './service/externalStorageMove/MoveJobManager';
 import IStreamApiModel from './api/stream/IStreamApiModel';
 import StreamApiModel from './api/stream/StreamApiModel';
 import IThumbnailApiModel from './api/thumbnail/IThumbnailApiModel';
@@ -409,4 +411,5 @@ export const set = (container: Container): void => {
 
     container.bind<IStorageApiModel>('IStorageApiModel').to(StorageApiModel).inSingletonScope();
     container.bind<IExternalStorageApiModel>('IExternalStorageApiModel').to(ExternalStorageApiModel).inSingletonScope();
+    container.bind<IMoveJobManager>('IMoveJobManager').to(MoveJobManager).inSingletonScope();
 };
