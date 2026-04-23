@@ -98,6 +98,13 @@ export default class NavigationState implements INavigationState {
             },
         });
         newItems.push({
+            icon: 'mdi-folder-network-outline',
+            title: '外部ストレージ',
+            herf: {
+                path: '/external-storage',
+            },
+        });
+        newItems.push({
             icon: 'mdi-sync',
             title: 'エンコード',
             herf: {

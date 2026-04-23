@@ -5,6 +5,7 @@ import container from './model/ModelContainer';
 import IScrollPositionState from './model/state/IScrollPositionState';
 import Dashboard from './views/Dashboard.vue';
 import Encode from './views/Encode.vue';
+import ExternalStorage from './views/ExternalStorage.vue';
 import Guide from './views/Guide.vue';
 import GuideSizeSetting from './views/GuideSizeSetting.vue';
 import ManualReserve from './views/ManualReserve.vue';
@@ -115,6 +116,11 @@ export default new Router({
             path: '/storages',
             name: 'storages',
             component: Storages,
+        },
+        {
+            path: '/external-storage',
+            name: 'external-storage',
+            component: ExternalStorage,
         },
     ],
     scrollBehavior: async (_to: Route, _from: Route, savedPosition: Position | void): Promise<Position> => {

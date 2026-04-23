@@ -545,4 +545,21 @@ export default class RecordedDB implements IRecordedDB {
             return queryBuilder.getMany();
         });
     }
+
+    /**
+     * externalPath が一致する録画番組を返す
+     */
+    public async findByExternalPath(externalPath: string): Promise<Recorded[]> {
+        const connection = await this.op.getConnection();
+
+        const queryBuilder = connection
+            .getRepository(Recorded)
+            .createQueryBuilder('recorded')
+            .where({ externalPath: externalPath })
+            .leftJoinAndSelect('recorded.thumbnails', 'thumbnails');
+
+        return await this.promieRetry.run(() => {
+            return queryBuilder.getMany();
+        });
+    }
 }

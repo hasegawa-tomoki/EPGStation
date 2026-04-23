@@ -769,6 +769,35 @@ export interface ExternalStorageList {
 }
 
 /**
+ * 外部ストレージ上のエントリ (ファイル or ディレクトリ)
+ */
+export interface ExternalStorageFileEntry {
+    name: string;
+    type: 'file' | 'dir';
+    size: number;
+    mtime: number;
+}
+
+/**
+ * 外部ストレージディレクトリに移動された録画情報
+ */
+export interface ExternalStorageRelatedRecorded {
+    id: RecordedId;
+    name: string;
+    thumbnailId?: ThumbnailId;
+}
+
+/**
+ * 外部ストレージの指定ディレクトリ配下一覧
+ */
+export interface ExternalStorageFileList {
+    storage: ExternalStorageItem;
+    subPath: string;
+    items: ExternalStorageFileEntry[];
+    relatedRecordeds: ExternalStorageRelatedRecorded[];
+}
+
+/**
  * 録画を外部ストレージに移動する際のオプション (HTTP body)
  */
 export interface MoveToExternalStorageOption {

@@ -1571,6 +1571,63 @@ components:
                     items:
                         $ref: '#/components/schemas/ExternalStorageItem'
 
+        ExternalStorageFileEntry:
+            description: 外部ストレージ上のエントリ (ファイル or ディレクトリ)
+            type: object
+            required:
+                - name
+                - type
+                - size
+                - mtime
+            properties:
+                name:
+                    type: string
+                type:
+                    type: string
+                    enum: [file, dir]
+                size:
+                    type: integer
+                    format: int64
+                mtime:
+                    type: integer
+                    format: int64
+
+        ExternalStorageRelatedRecorded:
+            description: このディレクトリに移動された録画情報
+            type: object
+            required:
+                - id
+                - name
+            properties:
+                id:
+                    $ref: '#/components/schemas/RecordedId'
+                name:
+                    type: string
+                thumbnailId:
+                    $ref: '#/components/schemas/ThumbnailId'
+
+        ExternalStorageFileList:
+            description: 外部ストレージの指定ディレクトリ配下一覧
+            type: object
+            required:
+                - storage
+                - subPath
+                - items
+                - relatedRecordeds
+            properties:
+                storage:
+                    $ref: '#/components/schemas/ExternalStorageItem'
+                subPath:
+                    type: string
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/ExternalStorageFileEntry'
+                relatedRecordeds:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/ExternalStorageRelatedRecorded'
+
         MoveToExternalStorageOption:
             description: 録画を外部ストレージに移動する際のオプション
             type: object
