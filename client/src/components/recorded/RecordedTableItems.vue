@@ -14,7 +14,10 @@
                 <tbody>
                     <tr v-for="item in items" v-bind:key="item.id" v-on:click="gotoDetail(item)" v-bind:class="{ 'selected-color': item.isSelected === true }">
                         <td>
-                            <v-chip v-if="item.display.isExternal === true" x-small label color="orange lighten-3" class="mr-1">NAS</v-chip>
+                            <v-chip v-if="item.display.isExternal === true" x-small label color="orange lighten-3" class="mr-1">
+                                <v-icon x-small left>mdi-nas</v-icon>
+                                NAS
+                            </v-chip>
                             {{ item.display.name }}
                         </td>
                         <td>{{ item.display.channelName }}</td>

@@ -10,7 +10,10 @@
         ></v-img>
         <div class="pa-2" v-on:click="gotoDetail">
             <div class="d-flex align-center">
-                <v-chip v-if="item.display.isExternal === true" x-small label color="orange lighten-3" class="mr-2">NAS</v-chip>
+                <v-chip v-if="item.display.isExternal === true" x-small label color="orange lighten-3" class="mr-2">
+                    <v-icon x-small left>mdi-nas</v-icon>
+                    NAS
+                </v-chip>
                 <div class="text subtitle-2 font-weight-bold">{{ item.display.name }}</div>
                 <v-spacer></v-spacer>
                 <RecordedItemMenu v-if="isEditMode === false" :recordedItem="item.recordedItem" v-on:stopEncode="stopEncode"></RecordedItemMenu>
