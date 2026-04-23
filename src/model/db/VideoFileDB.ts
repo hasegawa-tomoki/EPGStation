@@ -3,7 +3,7 @@ import * as apid from '../../../api';
 import VideoFile from '../../db/entities/VideoFile';
 import IPromiseRetry from '../IPromiseRetry';
 import IDBOperator from './IDBOperator';
-import IVideoFileDB, { UpdateFilePathOption } from './IVideoFileDB';
+import IVideoFileDB, { MoveToExternalStorageOption, UpdateFilePathOption } from './IVideoFileDB';
 
 @injectable()
 export default class VideoFileDB implements IVideoFileDB {
@@ -85,6 +85,31 @@ export default class VideoFileDB implements IVideoFileDB {
             .set({
                 parentDirectoryName: option.parentDirectoryName,
                 filePath: option.filePath,
+            })
+            .where({ id: option.videoFileId });
+
+        await this.promieRetry.run(() => {
+            return queryBuilder.execute();
+        });
+    }
+
+    /**
+     * 外部ストレージへ移動した VideoFile のメタデータを更新する
+     */
+    public async moveToExternalStorage(option: MoveToExternalStorageOption): Promise<void> {
+        const videoFile = await this.findId(option.videoFileId);
+        if (videoFile === null) {
+            throw new Error('VideoFileIsNull');
+        }
+
+        const connection = await this.op.getConnection();
+        const queryBuilder = connection
+            .createQueryBuilder()
+            .update(VideoFile)
+            .set({
+                externalStorageName: option.externalStorageName,
+                filePath: option.filePath,
+                parentDirectoryName: '',
             })
             .where({ id: option.videoFileId });
 

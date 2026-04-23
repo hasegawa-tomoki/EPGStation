@@ -27,12 +27,19 @@ export default class VideoUtil implements IVideoUtil {
             return null;
         }
 
-        const parentDir = this.getParentDirPath(video.parentDirectoryName);
-
-        return parentDir === null ? null : path.join(parentDir, video.filePath);
+        return this.getFullFilePathFromVideoFile(video);
     }
 
     public getFullFilePathFromVideoFile(videoFile: VideoFile): string | null {
+        // 外部ストレージに移動済みの場合は config.externalStorage から解決
+        if (typeof videoFile.externalStorageName === 'string' && videoFile.externalStorageName.length > 0) {
+            const ext = (this.config.externalStorage ?? []).find(s => s.name === videoFile.externalStorageName);
+            if (typeof ext === 'undefined') {
+                return null;
+            }
+            return path.join(ext.path, videoFile.filePath);
+        }
+
         const parentDir = this.getParentDirPath(videoFile.parentDirectoryName);
 
         return parentDir === null ? null : path.join(parentDir, videoFile.filePath);

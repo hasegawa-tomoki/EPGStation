@@ -20,6 +20,12 @@ export default class VideoFile extends BaseEntity {
 
     @Column({
         type: 'text',
+        nullable: true,
+    })
+    public externalStorageName?: string | null; // 外部ストレージ配下の場合、config.externalStorage の name。通常録画は null。
+
+    @Column({
+        type: 'text',
     })
     public type!: string; // apid.VideoFileType
 

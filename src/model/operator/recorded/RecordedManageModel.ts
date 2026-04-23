@@ -117,8 +117,16 @@ export default class RecordedManageModel implements IRecordedManageModel {
         }
 
         // 録画ファイル実ファイル削除
+        // ただし外部ストレージ (externalStorageName 設定あり) のファイルは残す
         if (hasVideoFiles === true && typeof recorded.videoFiles !== 'undefined') {
             for (const v of recorded.videoFiles) {
+                if (typeof v.externalStorageName === 'string' && v.externalStorageName.length > 0) {
+                    this.log.system.info(
+                        `skip external storage file: videoFileId=${v.id} storage=${v.externalStorageName}`,
+                    );
+                    continue;
+                }
+
                 let filePath: string | null;
                 try {
                     filePath = await this.videoUtil.getFullFilePathFromId(v.id);
@@ -460,14 +468,22 @@ export default class RecordedManageModel implements IRecordedManageModel {
             return await this.delete(video.recordedId, false);
         }
 
-        // 実ファイル削除
-        const filePath = await this.videoUtil.getFullFilePathFromId(videoFileid);
-        if (filePath !== null) {
-            this.log.system.info(`delete: ${filePath}`);
-            await FileUtil.unlink(filePath).catch(err => {
-                this.log.system.error(`failed to delete ${filePath}`);
-                this.log.system.error(err);
-            });
+        // 外部ストレージ上のファイルは残し、DB レコードのみ削除
+        const isExternal = typeof video.externalStorageName === 'string' && video.externalStorageName.length > 0;
+        if (isExternal === false) {
+            // 実ファイル削除
+            const filePath = await this.videoUtil.getFullFilePathFromId(videoFileid);
+            if (filePath !== null) {
+                this.log.system.info(`delete: ${filePath}`);
+                await FileUtil.unlink(filePath).catch(err => {
+                    this.log.system.error(`failed to delete ${filePath}`);
+                    this.log.system.error(err);
+                });
+            }
+        } else {
+            this.log.system.info(
+                `skip external storage file: videoFileId=${videoFileid} storage=${video.externalStorageName}`,
+            );
         }
 
         // DB から削除
@@ -740,11 +756,23 @@ export default class RecordedManageModel implements IRecordedManageModel {
             throw err;
         }
 
-        // DB 更新: VideoFile 削除 (Thumbnail は保持)、Recorded.externalPath 設定
+        // DB 更新: VideoFile は保持し externalStorageName と filePath を更新
+        // (Thumbnail は EPGStation 側に残す)
+        const storageRelSubDir = subDir;
         for (const v of videoFiles) {
-            await this.videoFileDB.deleteOnce(v.id).catch(e => {
-                this.log.system.error(`failed to delete videoFile ${v.id}: ${e.message}`);
-            });
+            const newFilePath =
+                storageRelSubDir.length > 0
+                    ? path.join(storageRelSubDir, path.basename(v.filePath))
+                    : path.basename(v.filePath);
+            await this.videoFileDB
+                .moveToExternalStorage({
+                    videoFileId: v.id,
+                    externalStorageName: storage.name,
+                    filePath: newFilePath,
+                })
+                .catch(e => {
+                    this.log.system.error(`failed to update videoFile ${v.id}: ${e.message}`);
+                });
         }
 
         await this.recordedDB.setExternalPath(option.recordedId, targetDir);
