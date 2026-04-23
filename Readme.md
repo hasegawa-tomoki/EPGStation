@@ -1,3 +1,72 @@
+# EPGStation改
+
+EPGStation をもとに hasegawa-tomoki による機能追加をしたバージョンです。
+以下が追加されています。
+
+## イベントリレー対応
+
+ルールによる予約がイベントリレーの対象になったとき、リレー先を手動予約として自動予約します。
+リレーされた予約は元のルールを引き継ぎ、録画済みにもルール ID が残ります。
+
+## 録画にルール名表示
+
+録画済一覧・詳細画面に、その録画を作成したルール名 (Rule.keyword) を表示します。
+クリックでそのルールが作成した録画一覧に絞り込めます。
+
+## 外部ストレージ (NAS) 連携
+
+録画済みファイルを NAS などの外部ストレージへ移動し、EPGStation 管理外のアーカイブとして
+扱うための機能一式です。
+
+### 設定 (config.yml)
+
+```yaml
+externalStorage:
+    - name: nas-langley
+      path: /mnt/nas/recorded
+```
+
+コンテナ運用の場合、`compose.yml` の volumes で当該パスを bind マウントする必要があります。
+NAS のリマウントをコンテナに自動反映したい場合は `:rslave` 指定推奨。
+
+### UI 機能
+
+-   **単品/一括移動**: 録画詳細メニュー・録画済一覧の「選択」モード (編集モード) から外部ストレージへ移動
+-   **ジョブ管理画面** (`/external-storage/jobs`): サーバー側で移動ジョブをキュー管理。
+    ブラウザを閉じても継続、進捗バー + キャンセル可能。同時に複数ジョブを投入可
+-   **移動先履歴サジェスト**: ダイアログの保存先入力を `v-combobox` 化し、過去の移動先を
+    自動提示 (既存の `Recorded.externalPath` から集計、サーバー永続)
+-   **外部ストレージブラウザ** (`/external-storage`): フォルダナビゲーション、
+    新規フォルダ作成、ファイル/フォルダのリネーム、同一ストレージ内の移動、
+    対応する録画への紐付け表示 (VideoFile.filePath 完全一致)
+-   **録画済一覧の絞り込み**: 検索メニューに「内部対象」「NAS 対象」チェックボックス追加
+
+### バックエンド挙動
+
+-   移動処理は `fs.copyFile + fs.unlink` (cross-device では必然)。コピー完了まで
+    ソースは安全 (unlink されない)
+-   サムネイルは EPGStation 側に残し、DB レコードも保持 (移動後も UI で表示可能)
+-   `VideoFile` レコードは削除せず `externalStorageName` と `filePath` を更新 →
+    移動後も EPGStation UI から再生・ストリーミング・エンコード可能
+-   EPGStation から録画削除しても NAS 上のファイルは保持 (DB のみ削除)
+-   録画 1 件内のファイル (TS + エンコード済) は atomic に扱われ、
+    一部失敗時は完了済みを best-effort でロールバック
+
+## CI/CD
+
+-   `Dockerfile.debian-ffmpeg` で FFmpeg ビルド層を別イメージ化し、
+    `ghcr.io/hasegawa-tomoki/epgstation-ffmpeg:7.0-debian` として供給
+-   `Dockerfile.debian` (派生側) が `FROM epgstation + COPY --from=ffmpeg-base` で構成され、
+    アプリ変更時のビルドが秒オーダーで完了
+-   `.github/workflows/docker.yml` は master push 時 `debian + linux/amd64` のみで
+    高速 CI (~3 分)。タグ push 時のみフルマトリクス (alpine + arm)
+-   `ghcr.io/hasegawa-tomoki/epgstation` に immutable な `sha-<shortsha>` タグで push、
+    prod 側の `EPGSTATION_TAG` を書き換えて即時ロールバック可能
+
+---
+
+以下、オリジナルの内容です。
+
 # EPGStation
 
 [Mirakurun](https://github.com/Chinachu/Mirakurun) を使用した録画管理ソフトです  
