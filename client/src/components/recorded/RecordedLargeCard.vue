@@ -10,10 +10,7 @@
         ></v-img>
         <div class="pa-2" v-on:click="gotoDetail">
             <div class="d-flex align-center">
-                <v-chip v-if="item.display.isExternal === true" x-small label color="orange lighten-3" class="mr-2 flex-shrink-0">
-                    <v-icon x-small left>mdi-nas</v-icon>
-                    NAS
-                </v-chip>
+                <span v-if="item.display.isExternal === true" class="nas-badge">NAS</span>
                 <div class="text subtitle-2 font-weight-bold">{{ item.display.name }}</div>
                 <v-spacer></v-spacer>
                 <RecordedItemMenu v-if="isEditMode === false" :recordedItem="item.recordedItem" v-on:stopEncode="stopEncode"></RecordedItemMenu>
@@ -100,6 +97,18 @@ export default class RecordedLargeCard extends Vue {
 
     .rule
         text-decoration: underline
+
+    .nas-badge
+        display: inline-block
+        flex-shrink: 0
+        padding: 1px 4px
+        margin-right: 6px
+        font-size: 10px
+        font-weight: 600
+        line-height: 1.4
+        color: rgba(0, 0, 0, 0.87)
+        background-color: #FFCC80
+        border-radius: 4px
 
     .dummy
         visibility: hidden

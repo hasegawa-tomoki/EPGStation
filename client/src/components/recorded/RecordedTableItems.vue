@@ -14,10 +14,7 @@
                 <tbody>
                     <tr v-for="item in items" v-bind:key="item.id" v-on:click="gotoDetail(item)" v-bind:class="{ 'selected-color': item.isSelected === true }">
                         <td>
-                            <v-chip v-if="item.display.isExternal === true" x-small label color="orange lighten-3" class="mr-1">
-                                <v-icon x-small left>mdi-nas</v-icon>
-                                NAS
-                            </v-chip>
+                            <span v-if="item.display.isExternal === true" class="nas-badge">NAS</span>
                             {{ item.display.name }}
                         </td>
                         <td>{{ item.display.channelName }}</td>
@@ -95,4 +92,15 @@ export default class RecordedTableItems extends Vue {
             text-decoration: underline
     .menu
         width: 68px
+    .nas-badge
+        display: inline-block
+        padding: 1px 4px
+        margin-right: 6px
+        font-size: 10px
+        font-weight: 600
+        line-height: 1.4
+        color: rgba(0, 0, 0, 0.87)
+        background-color: #FFCC80
+        border-radius: 4px
+        vertical-align: middle
 </style>

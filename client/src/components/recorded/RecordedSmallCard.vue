@@ -11,10 +11,7 @@
         ></v-img>
         <div v-on:click="gotoDetail" class="content pa-2 my-auto">
             <div class="d-flex align-center">
-                <v-chip v-if="item.display.isExternal === true" x-small label color="orange lighten-3" class="mr-1 my-1 flex-shrink-0">
-                    <v-icon x-small left>mdi-nas</v-icon>
-                    NAS
-                </v-chip>
+                <span v-if="item.display.isExternal === true" class="nas-badge">NAS</span>
                 <div class="text mt-1 subtitle-2 font-weight-bold">{{ item.display.name }}</div>
                 <div v-if="isEditMode === false" class="menu-wrap">
                     <RecordedItemMenu :recordedItem="item.recordedItem" v-on:stopEncode="stopEncode"></RecordedItemMenu>
@@ -122,6 +119,18 @@ export default class RecordedSmallCard extends Vue {
 
         .rule
             text-decoration: underline
+
+        .nas-badge
+            display: inline-block
+            flex-shrink: 0
+            padding: 1px 4px
+            margin-right: 6px
+            font-size: 10px
+            font-weight: 600
+            line-height: 1.4
+            color: rgba(0, 0, 0, 0.87)
+            background-color: #FFCC80
+            border-radius: 4px
 
     .menu-wrap
         position: absolute
