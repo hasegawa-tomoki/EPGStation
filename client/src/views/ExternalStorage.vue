@@ -77,11 +77,11 @@
             </div>
 
             <!-- リネームダイアログ -->
-            <v-dialog v-model="renameDialogOpen" max-width="500">
+            <v-dialog v-model="renameDialogOpen" max-width="900" width="90%">
                 <v-card>
                     <v-card-title>リネーム</v-card-title>
                     <v-card-text>
-                        <div class="body-2 mb-2">{{ renameTargetSubPath }}</div>
+                        <div class="body-2 mb-2 path-break">{{ renameTargetSubPath }}</div>
                         <v-text-field v-model="renameNewName" label="新しい名前" autofocus></v-text-field>
                     </v-card-text>
                     <v-card-actions>
@@ -296,4 +296,8 @@ export default class ExternalStorage extends Vue {
 <style lang="sass" scoped>
 .row-link
     cursor: pointer
+
+.path-break
+    word-break: break-all
+    color: rgba(0, 0, 0, 0.6)
 </style>
