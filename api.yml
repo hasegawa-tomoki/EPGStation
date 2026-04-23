@@ -1591,6 +1591,11 @@ components:
                 mtime:
                     type: integer
                     format: int64
+                recordedIds:
+                    description: ファイル名に Recorded.name が含まれるものを best-effort で紐付けた録画 ID リスト
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/RecordedId'
 
         ExternalStorageRelatedRecorded:
             description: このディレクトリに移動された録画情報

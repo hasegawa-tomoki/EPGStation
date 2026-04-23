@@ -776,6 +776,7 @@ export interface ExternalStorageFileEntry {
     type: 'file' | 'dir';
     size: number;
     mtime: number;
+    recordedIds?: RecordedId[];
 }
 
 /**

@@ -27,14 +27,6 @@
                     </template>
                 </v-breadcrumbs>
 
-                <!-- 紐付く録画 -->
-                <div v-if="list && list.relatedRecordeds.length > 0" class="mt-2 mb-2">
-                    <div class="subtitle-2">このディレクトリに移動された録画</div>
-                    <v-chip v-for="r in list.relatedRecordeds" :key="r.id" class="mr-1 mb-1" small label color="primary" outlined v-on:click="gotoRecorded(r.id)">
-                        {{ r.name }}
-                    </v-chip>
-                </div>
-
                 <!-- ファイル/ディレクトリ一覧 -->
                 <v-card v-if="list" class="mt-2">
                     <v-simple-table>
@@ -58,7 +50,14 @@
                                     <v-icon v-if="item.type === 'dir'">mdi-folder-outline</v-icon>
                                     <v-icon v-else>mdi-file-outline</v-icon>
                                 </td>
-                                <td>{{ item.name }}</td>
+                                <td>
+                                    <div>{{ item.name }}</div>
+                                    <div v-if="item.recordedIds && item.recordedIds.length > 0" class="mt-1">
+                                        <v-chip v-for="rid in item.recordedIds" :key="rid" x-small label color="primary" outlined class="mr-1" v-on:click.stop="gotoRecorded(rid)">
+                                            {{ recordedNameMap[rid] || '録画 #' + rid }}
+                                        </v-chip>
+                                    </div>
+                                </td>
                                 <td class="text-right">{{ item.type === 'dir' ? '' : formatSize(item.size) }}</td>
                                 <td>{{ formatMtime(item.mtime) }}</td>
                             </tr>
@@ -100,6 +99,16 @@ export default class ExternalStorage extends Vue {
     public storageOptions: { name: string; label: string; path: string }[] = [];
     public selectedStorage: string | null = null;
     public list: apid.ExternalStorageFileList | null = null;
+
+    get recordedNameMap(): { [id: number]: string } {
+        const m: { [id: number]: string } = {};
+        if (this.list) {
+            for (const r of this.list.relatedRecordeds) {
+                m[r.id] = r.name;
+            }
+        }
+        return m;
+    }
 
     private api = container.get<IExternalStorageApiModel>('IExternalStorageApiModel');
     private snackbar = container.get<ISnackbarState>('ISnackbarState');

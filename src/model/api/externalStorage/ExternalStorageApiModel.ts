@@ -93,6 +93,22 @@ export default class ExternalStorageApiModel implements IExternalStorageApiModel
             };
         });
 
+        // ファイル名に Recorded.name が含まれていれば紐付ける (best-effort マッチ)
+        for (const item of items) {
+            if (item.type !== 'file') {
+                continue;
+            }
+            const base = item.name.replace(/\.[^.]+$/, '');
+            for (const r of recordeds) {
+                if (r.name.length > 0 && base.indexOf(r.name) !== -1) {
+                    if (typeof item.recordedIds === 'undefined') {
+                        item.recordedIds = [];
+                    }
+                    item.recordedIds.push(r.id);
+                }
+            }
+        }
+
         return {
             storage: { name: storage.name, path: storage.path },
             subPath: normalizedSub,
