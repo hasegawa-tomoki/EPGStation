@@ -1,0 +1,73 @@
+name: Docker FFmpeg Base
+
+# FFmpeg のソース・ビルドを含むベースイメージを ghcr.io に push する。
+# EPGStation 側コードの変更では再ビルドされないよう、この Dockerfile 自体・
+# 本ワークフロー・手動実行のときのみ発火するよう paths フィルタを絞っている。
+
+on:
+    push:
+        branches:
+            - master
+        paths:
+            - 'Dockerfile.debian-ffmpeg'
+            - '.github/workflows/docker-ffmpeg.yml'
+    workflow_dispatch:
+        inputs:
+            ffmpeg_version:
+                description: 'FFmpeg version (overrides default 7.0)'
+                required: false
+                default: '7.0'
+
+env:
+    REGISTRY: ghcr.io
+    IMAGE_NAME: hasegawa-tomoki/epgstation-ffmpeg
+    DEFAULT_FFMPEG_VERSION: '7.0'
+
+jobs:
+    build:
+        permissions:
+            contents: read
+            packages: write
+        strategy:
+            matrix:
+                distro:
+                    - debian
+                include:
+                    - distro: debian
+                      platforms: linux/amd64,linux/arm/v7,linux/arm64/v8
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - name: Resolve FFmpeg version
+              id: ver
+              run: |
+                  V="${{ github.event.inputs.ffmpeg_version }}"
+                  if [ -z "$V" ]; then V="${DEFAULT_FFMPEG_VERSION}"; fi
+                  echo "ffmpeg=$V" >> "$GITHUB_OUTPUT"
+            - name: Docker tags
+              id: docker-tags
+              run: |
+                  IMAGE="${REGISTRY}/${IMAGE_NAME}"
+                  SHORT_SHA="${GITHUB_SHA::7}"
+                  V="${{ steps.ver.outputs.ffmpeg }}"
+                  TAGS="$IMAGE:${V}-${{ matrix.distro }},$IMAGE:${V}-${{ matrix.distro }}-sha-${SHORT_SHA}"
+                  echo "Tags: $TAGS"
+                  echo "tags=$TAGS" >> "$GITHUB_OUTPUT"
+            - uses: docker/setup-qemu-action@v3
+            - uses: docker/setup-buildx-action@v3
+            - uses: docker/login-action@v3
+              with:
+                  registry: ${{ env.REGISTRY }}
+                  username: ${{ github.actor }}
+                  password: ${{ secrets.GITHUB_TOKEN }}
+            - uses: docker/build-push-action@v5
+              with:
+                  context: .
+                  file: Dockerfile.${{ matrix.distro }}-ffmpeg
+                  platforms: ${{ matrix.platforms }}
+                  build-args: |
+                      FFMPEG_VERSION=${{ steps.ver.outputs.ffmpeg }}
+                  tags: ${{ steps.docker-tags.outputs.tags }}
+                  cache-from: type=gha,scope=ffmpeg-${{ matrix.distro }}
+                  cache-to: type=gha,mode=max,scope=ffmpeg-${{ matrix.distro }}
+                  push: true
