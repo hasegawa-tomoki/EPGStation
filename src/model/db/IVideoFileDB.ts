@@ -19,6 +19,8 @@ export default interface IVideoFileDB {
     updateFilePath(option: UpdateFilePathOption): Promise<void>;
     updateSize(videoFileId: apid.VideoFileId, size: number): Promise<void>;
     moveToExternalStorage(option: MoveToExternalStorageOption): Promise<void>;
+    updateExternalStorageFilePath(externalStorageName: string, oldFilePath: string, newFilePath: string): Promise<void>;
+    updateExternalStoragePathPrefix(externalStorageName: string, oldPrefix: string, newPrefix: string): Promise<void>;
     deleteOnce(VideoFileId: apid.VideoFileId): Promise<void>;
     deleteRecordedId(recordedId: apid.RecordedId): Promise<void>;
     findId(videoFileId: apid.VideoFileId): Promise<VideoFile | null>;

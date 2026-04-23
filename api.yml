@@ -1647,6 +1647,20 @@ components:
                     type: string
                     nullable: true
 
+        RenameExternalStorageOption:
+            description: 外部ストレージ上のファイル/ディレクトリをリネームする際のオプション
+            type: object
+            required:
+                - subPath
+                - newName
+            properties:
+                subPath:
+                    description: 対象エントリの storage root からの相対パス
+                    type: string
+                newName:
+                    description: 新しい basename (path separator 不可)
+                    type: string
+
         Error:
             type: object
             readOnly: true

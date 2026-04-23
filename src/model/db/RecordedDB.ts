@@ -174,6 +174,34 @@ export default class RecordedDB implements IRecordedDB {
     }
 
     /**
+     * externalPath が oldPrefix の場合または oldPrefix + '/' で始まる場合、newPrefix に置換する
+     * (外部ストレージのディレクトリリネーム用)
+     */
+    public async updateExternalPathPrefix(oldPrefix: string, newPrefix: string): Promise<void> {
+        const connection = await this.op.getConnection();
+        const qb = connection
+            .getRepository(Recorded)
+            .createQueryBuilder('r')
+            .where('r.externalPath = :prefix', { prefix: oldPrefix })
+            .orWhere('r.externalPath LIKE :pattern', { pattern: oldPrefix + '/%' });
+        const rows = await this.promieRetry.run(() => qb.getMany());
+
+        for (const row of rows) {
+            if (row.externalPath === null || typeof row.externalPath === 'undefined') {
+                continue;
+            }
+            const newPath =
+                row.externalPath === oldPrefix ? newPrefix : newPrefix + row.externalPath.slice(oldPrefix.length);
+            const uqb = connection
+                .createQueryBuilder()
+                .update(Recorded)
+                .set({ externalPath: newPath })
+                .where({ id: row.id });
+            await this.promieRetry.run(() => uqb.execute());
+        }
+    }
+
+    /**
      * 保護状態を変更する
      * @param recordedId: apid.RecordedId
      * @param isProtect: boolean

@@ -119,6 +119,57 @@ export default class VideoFileDB implements IVideoFileDB {
     }
 
     /**
+     * 外部ストレージ配下の VideoFile で filePath が一致するものの filePath を差し替える
+     * (単一ファイルのリネーム用)
+     */
+    public async updateExternalStorageFilePath(
+        externalStorageName: string,
+        oldFilePath: string,
+        newFilePath: string,
+    ): Promise<void> {
+        const connection = await this.op.getConnection();
+        const queryBuilder = connection
+            .createQueryBuilder()
+            .update(VideoFile)
+            .set({ filePath: newFilePath })
+            .where('externalStorageName = :name AND filePath = :old', {
+                name: externalStorageName,
+                old: oldFilePath,
+            });
+        await this.promieRetry.run(() => {
+            return queryBuilder.execute();
+        });
+    }
+
+    /**
+     * 外部ストレージ配下の VideoFile で filePath が prefix で始まるものを別 prefix に置換する
+     * (ディレクトリリネーム用)。mysql/sqlite 双方で動くように DB 層では取得→個別更新で実装。
+     */
+    public async updateExternalStoragePathPrefix(
+        externalStorageName: string,
+        oldPrefix: string,
+        newPrefix: string,
+    ): Promise<void> {
+        const connection = await this.op.getConnection();
+        const qb = connection
+            .getRepository(VideoFile)
+            .createQueryBuilder('v')
+            .where('v.externalStorageName = :name', { name: externalStorageName })
+            .andWhere('v.filePath LIKE :pattern', { pattern: oldPrefix + '/%' });
+        const rows = await this.promieRetry.run(() => qb.getMany());
+
+        for (const row of rows) {
+            const newPath = newPrefix + row.filePath.slice(oldPrefix.length);
+            const uqb = connection
+                .createQueryBuilder()
+                .update(VideoFile)
+                .set({ filePath: newPath })
+                .where({ id: row.id });
+            await this.promieRetry.run(() => uqb.execute());
+        }
+    }
+
+    /**
      * ファイルサイズ更新
      * @param videoFileId: video file id
      * @param size: file size

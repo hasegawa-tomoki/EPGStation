@@ -36,12 +36,14 @@
                                 <th>名前</th>
                                 <th style="width: 120px" class="text-right">サイズ</th>
                                 <th style="width: 170px">更新日時</th>
+                                <th style="width: 60px"></th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr v-if="list.subPath.length > 0" v-on:click="navigateUp" class="row-link">
                                 <td><v-icon>mdi-arrow-up-bold</v-icon></td>
                                 <td>..</td>
+                                <td></td>
                                 <td></td>
                                 <td></td>
                             </tr>
@@ -60,14 +62,35 @@
                                 </td>
                                 <td class="text-right">{{ item.type === 'dir' ? '' : formatSize(item.size) }}</td>
                                 <td>{{ formatMtime(item.mtime) }}</td>
+                                <td>
+                                    <v-btn icon small v-on:click.stop="openRenameDialog(item)">
+                                        <v-icon small>mdi-pencil</v-icon>
+                                    </v-btn>
+                                </td>
                             </tr>
                             <tr v-if="list.items.length === 0 && list.subPath.length === 0">
-                                <td colspan="4" class="text-center body-2 text-disabled">(空)</td>
+                                <td colspan="5" class="text-center body-2 text-disabled">(空)</td>
                             </tr>
                         </tbody>
                     </v-simple-table>
                 </v-card>
             </div>
+
+            <!-- リネームダイアログ -->
+            <v-dialog v-model="renameDialogOpen" max-width="500">
+                <v-card>
+                    <v-card-title>リネーム</v-card-title>
+                    <v-card-text>
+                        <div class="body-2 mb-2">{{ renameTargetSubPath }}</div>
+                        <v-text-field v-model="renameNewName" label="新しい名前" autofocus></v-text-field>
+                    </v-card-text>
+                    <v-card-actions>
+                        <v-spacer></v-spacer>
+                        <v-btn text v-on:click="renameDialogOpen = false">キャンセル</v-btn>
+                        <v-btn color="primary" :disabled="!canSubmitRename || isRenaming" :loading="isRenaming" v-on:click="submitRename">変更</v-btn>
+                    </v-card-actions>
+                </v-card>
+            </v-dialog>
         </v-container>
     </v-main>
 </template>
@@ -99,6 +122,26 @@ export default class ExternalStorage extends Vue {
     public storageOptions: { name: string; label: string; path: string }[] = [];
     public selectedStorage: string | null = null;
     public list: apid.ExternalStorageFileList | null = null;
+
+    public renameDialogOpen: boolean = false;
+    public renameTarget: apid.ExternalStorageFileEntry | null = null;
+    public renameNewName: string = '';
+    public isRenaming: boolean = false;
+
+    get renameTargetSubPath(): string {
+        if (this.renameTarget === null) return '';
+        return this.currentSubPath.length > 0 ? `${this.currentSubPath}/${this.renameTarget.name}` : this.renameTarget.name;
+    }
+
+    get canSubmitRename(): boolean {
+        if (this.renameTarget === null) return false;
+        const trimmed = this.renameNewName.trim();
+        if (trimmed.length === 0) return false;
+        if (trimmed === this.renameTarget.name) return false;
+        if (trimmed.indexOf('/') !== -1 || trimmed.indexOf('\\') !== -1) return false;
+        if (trimmed === '.' || trimmed === '..') return false;
+        return true;
+    }
 
     get recordedNameMap(): { [id: number]: string } {
         const m: { [id: number]: string } = {};
@@ -198,6 +241,31 @@ export default class ExternalStorage extends Vue {
 
     public gotoRecorded(id: apid.RecordedId): void {
         Util.move(this.$router, { path: `/recorded/detail/${id}` }).catch(() => {});
+    }
+
+    public openRenameDialog(item: apid.ExternalStorageFileEntry): void {
+        this.renameTarget = item;
+        this.renameNewName = item.name;
+        this.renameDialogOpen = true;
+    }
+
+    public async submitRename(): Promise<void> {
+        if (!this.canSubmitRename || this.renameTarget === null || this.selectedStorage === null) return;
+        this.isRenaming = true;
+        try {
+            await this.api.rename(this.selectedStorage, {
+                subPath: this.renameTargetSubPath,
+                newName: this.renameNewName.trim(),
+            });
+            this.snackbar.open({ color: 'success', text: 'リネームしました' });
+            this.renameDialogOpen = false;
+            this.renameTarget = null;
+            await this.reload();
+        } catch (err: any) {
+            this.snackbar.open({ color: 'error', text: `リネーム失敗: ${err?.response?.data?.message ?? err.message ?? ''}` });
+        } finally {
+            this.isRenaming = false;
+        }
     }
 
     public formatSize(bytes: number): string {

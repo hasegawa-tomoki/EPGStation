@@ -807,6 +807,14 @@ export interface MoveToExternalStorageOption {
 }
 
 /**
+ * 外部ストレージ上のファイル/ディレクトリをリネームするオプション (HTTP body)
+ */
+export interface RenameExternalStorageOption {
+    subPath: string;
+    newName: string;
+}
+
+/**
  * バージョン情報
  */
 export interface VersionInfo {

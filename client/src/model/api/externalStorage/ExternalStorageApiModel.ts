@@ -24,4 +24,8 @@ export default class ExternalStorageApiModel implements IExternalStorageApiModel
 
         return result.data;
     }
+
+    public async rename(storageName: string, option: apid.RenameExternalStorageOption): Promise<void> {
+        await this.repository.post(`/externalStorages/${encodeURIComponent(storageName)}/rename`, option);
+    }
 }
