@@ -18,6 +18,7 @@
             </div>
             <div class="text caption font-weight-light">{{ item.display.channelName }}</div>
             <div class="text caption font-weight-light">{{ item.display.time }} ({{ item.display.duration }} m)</div>
+            <div v-if="typeof item.display.ruleId !== 'undefined'" class="text caption font-weight-light rule" v-on:click.stop="openRule">ルール: {{ item.display.ruleName }}</div>
 
             <div
                 v-if="isShowDropInfo === true && typeof item.display.drop !== 'undefined'"
@@ -74,6 +75,14 @@ export default class RecordedSmallCard extends Vue {
     public stopEncode(recordedId: apid.RecordedId): void {
         this.$emit('stopEncode', recordedId);
     }
+
+    public openRule(): void {
+        const ruleId = this.item.display.ruleId;
+        if (typeof ruleId === 'undefined') {
+            return;
+        }
+        this.$router.push({ path: '/recorded', query: { ruleId: ruleId.toString(10) } });
+    }
 }
 </script>
 
@@ -106,6 +115,9 @@ export default class RecordedSmallCard extends Vue {
         .droped
             color: red
             font-weight: bold !important
+
+        .rule
+            text-decoration: underline
 
     .menu-wrap
         position: absolute

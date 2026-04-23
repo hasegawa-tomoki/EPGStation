@@ -353,6 +353,7 @@ export interface Records {
 export interface RecordedItem {
     id: RecordedId;
     ruleId?: RuleId;
+    ruleName?: string;
     programId?: ProgramId;
     channelId: ChannelId;
     startAt: UnixtimeMS;

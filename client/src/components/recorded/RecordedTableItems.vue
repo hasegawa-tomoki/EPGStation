@@ -7,6 +7,7 @@
                         <th>タイトル</th>
                         <th class="channel">放送局</th>
                         <th class="time">時間</th>
+                        <th class="rule">ルール</th>
                         <th class="menu"></th>
                     </tr>
                 </thead>
@@ -15,6 +16,9 @@
                         <td>{{ item.display.name }}</td>
                         <td>{{ item.display.channelName }}</td>
                         <td>{{ item.display.shortTime }} ({{ item.display.duration }} m)</td>
+                        <td class="rule">
+                            <span v-if="typeof item.display.ruleId !== 'undefined'" class="rule-link" v-on:click.stop="openRule(item)">{{ item.display.ruleName }}</span>
+                        </td>
                         <td class="menu">
                             <RecordedItemMenu v-if="isEditMode === false" :recordedItem="item.recordedItem" v-on:stopEncode="stopEncode"></RecordedItemMenu>
                         </td>
@@ -58,6 +62,14 @@ export default class RecordedTableItems extends Vue {
     public stopEncode(recordedId: apid.RecordedId): void {
         this.$emit('stopEncode', recordedId);
     }
+
+    public openRule(item: RecordedDisplayData): void {
+        const ruleId = item.display.ruleId;
+        if (typeof ruleId === 'undefined') {
+            return;
+        }
+        this.$router.push({ path: '/recorded', query: { ruleId: ruleId.toString(10) } });
+    }
 }
 </script>
 
@@ -68,6 +80,13 @@ export default class RecordedTableItems extends Vue {
         min-width: 180px
     .time
         width: 190px
+    .rule
+        max-width: 200px
+        overflow: hidden
+        text-overflow: ellipsis
+        white-space: nowrap
+        .rule-link
+            text-decoration: underline
     .menu
         width: 68px
 </style>

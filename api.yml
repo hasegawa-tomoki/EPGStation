@@ -1020,6 +1020,9 @@ components:
                     $ref: '#/components/schemas/RecordedId'
                 ruleId:
                     $ref: '#/components/schemas/RuleId'
+                ruleName:
+                    description: 録画ルール名 (Rule.keyword)。手動予約や参照先ルール削除時は未定義
+                    type: string
                 programId:
                     $ref: '#/components/schemas/ProgramId'
                 channelId:

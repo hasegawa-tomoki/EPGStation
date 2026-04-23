@@ -64,6 +64,11 @@ export default class RecordedUtil implements IRecordedUtil {
             result.display.genre = genres;
         }
 
+        if (typeof item.ruleId !== 'undefined') {
+            result.display.ruleId = item.ruleId;
+            result.display.ruleName = item.ruleName ?? `ルール #${item.ruleId}`;
+        }
+
         if (item.isRecording !== true && typeof item.dropLogFile !== 'undefined') {
             let fileSize = 0;
             if (typeof item.videoFiles !== 'undefined') {

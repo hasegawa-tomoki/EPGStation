@@ -1,29 +1,52 @@
 import { inject, injectable } from 'inversify';
 import * as apid from '../../../../api';
 import IRecordedDB, { FindAllOption } from '../../db/IRecordedDB';
+import IRuleDB from '../../db/IRuleDB';
 import IIPCClient from '../../ipc/IIPCClient';
 import { UploadedVideoFileOption } from '../../operator/recorded/IRecordedManageModel';
 import IEncodeManageModel from '../../service/encode/IEncodeManageModel';
-import IRecordedItemUtil from '../IRecordedItemUtil';
+import IRecordedItemUtil, { RuleKeywordIndex } from '../IRecordedItemUtil';
 import IRecordedApiModel from './IRecordedApiModel';
 
 @injectable()
 export default class RecordedApiModel implements IRecordedApiModel {
     private ipc: IIPCClient;
     private recordedDB: IRecordedDB;
+    private ruleDB: IRuleDB;
     private encodeManage: IEncodeManageModel;
     private recordedItemUtil: IRecordedItemUtil;
 
     constructor(
         @inject('IIPCClient') ipc: IIPCClient,
         @inject('IRecordedDB') recordedDB: IRecordedDB,
+        @inject('IRuleDB') ruleDB: IRuleDB,
         @inject('IEncodeManageModel') encodeManage: IEncodeManageModel,
         @inject('IRecordedItemUtil') recordedItemUtil: IRecordedItemUtil,
     ) {
         this.recordedDB = recordedDB;
+        this.ruleDB = ruleDB;
         this.ipc = ipc;
         this.encodeManage = encodeManage;
         this.recordedItemUtil = recordedItemUtil;
+    }
+
+    /**
+     * Recorded 配列に含まれる ruleId の keyword を bulk で取得する
+     */
+    private async buildRuleKeywordIndex(ruleIds: (number | null | undefined)[]): Promise<RuleKeywordIndex> {
+        const uniqueIds = Array.from(
+            new Set(ruleIds.filter((id): id is number => typeof id === 'number')),
+        );
+        const index: RuleKeywordIndex = {};
+        await Promise.all(
+            uniqueIds.map(async id => {
+                const rule = await this.ruleDB.findId(id);
+                if (rule !== null) {
+                    index[id] = rule.searchOption?.keyword ?? null;
+                }
+            }),
+        );
+        return index;
     }
 
     /**
@@ -41,10 +64,16 @@ export default class RecordedApiModel implements IRecordedApiModel {
         });
 
         const encodeIndex = this.encodeManage.getRecordedIndex();
+        const ruleKeywordIndex = await this.buildRuleKeywordIndex(records.map(r => r.ruleId));
 
         return {
             records: records.map(r => {
-                return this.recordedItemUtil.convertRecordedToRecordedItem(r, option.isHalfWidth, encodeIndex);
+                return this.recordedItemUtil.convertRecordedToRecordedItem(
+                    r,
+                    option.isHalfWidth,
+                    encodeIndex,
+                    ruleKeywordIndex,
+                );
             }),
             total,
         };
@@ -58,12 +87,14 @@ export default class RecordedApiModel implements IRecordedApiModel {
      */
     public async get(recordedId: apid.RecordedId, isHalfWidth: boolean): Promise<apid.RecordedItem | null> {
         const item = await this.recordedDB.findId(recordedId);
+        if (item === null) {
+            return null;
+        }
 
         const encodeIndex = this.encodeManage.getRecordedIndex();
+        const ruleKeywordIndex = await this.buildRuleKeywordIndex([item.ruleId]);
 
-        return item === null
-            ? null
-            : this.recordedItemUtil.convertRecordedToRecordedItem(item, isHalfWidth, encodeIndex);
+        return this.recordedItemUtil.convertRecordedToRecordedItem(item, isHalfWidth, encodeIndex, ruleKeywordIndex);
     }
 
     /**

@@ -3,7 +3,7 @@ import { injectable } from 'inversify';
 import * as apid from '../../../api';
 import Recorded from '../../db/entities/Recorded';
 import { EncodeRecordedIdIndex } from '../service/encode/IEncodeManageModel';
-import IRecordedItemUtil from './IRecordedItemUtil';
+import IRecordedItemUtil, { RuleKeywordIndex } from './IRecordedItemUtil';
 
 @injectable()
 export default class RecordedItemUtil implements IRecordedItemUtil {
@@ -11,11 +11,14 @@ export default class RecordedItemUtil implements IRecordedItemUtil {
      * Recorded を RecordedItem に変換する
      * @param recorded: Recorded
      * @param isHalfWidth isHalfWidth
+     * @param encodeIndex エンコード中判定用 index
+     * @param ruleKeywordIndex ruleId → keyword の事前ルックアップ (API 呼び出し側が bulk 取得)
      */
     public convertRecordedToRecordedItem(
         recorded: Recorded,
         isHalfWidth: boolean,
         encodeIndex: EncodeRecordedIdIndex = {},
+        ruleKeywordIndex: RuleKeywordIndex = {},
     ): apid.RecordedItem {
         const item: apid.RecordedItem = {
             id: recorded.id,
@@ -28,8 +31,12 @@ export default class RecordedItemUtil implements IRecordedItemUtil {
             isProtected: recorded.isProtected,
         };
 
-        if (recorded.ruleId !== null) {
+        if (recorded.ruleId !== null && typeof recorded.ruleId !== 'undefined') {
             item.ruleId = recorded.ruleId;
+            const keyword = ruleKeywordIndex[recorded.ruleId];
+            if (typeof keyword === 'string' && keyword.length > 0) {
+                item.ruleName = keyword;
+            }
         }
 
         if (recorded.programId !== null) {
