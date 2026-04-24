@@ -54,21 +54,21 @@
                                 <td></td>
                             </tr>
                             <tr v-for="item in list.items" :key="item.name" v-on:click="onRowClick(item)" v-bind:class="{ 'row-link': item.type === 'dir' }">
-                                <td>
+                                <td class="cell">
                                     <v-icon v-if="item.type === 'dir'">mdi-folder-outline</v-icon>
                                     <v-icon v-else>mdi-file-outline</v-icon>
                                 </td>
-                                <td>
+                                <td class="cell">
                                     <div>{{ item.name }}</div>
-                                    <div v-if="item.recordedIds && item.recordedIds.length > 0" class="mt-1">
-                                        <v-chip v-for="rid in item.recordedIds" :key="rid" x-small label color="grey lighten-3" class="mr-1" v-on:click.stop="gotoRecorded(rid)">
+                                    <div v-if="item.recordedIds && item.recordedIds.length > 0" class="related-recordings">
+                                        <span v-for="rid in item.recordedIds" :key="rid" class="related-recording" v-on:click.stop="gotoRecorded(rid)">
                                             {{ recordedNameMap[rid] || '録画 #' + rid }}
-                                        </v-chip>
+                                        </span>
                                     </div>
                                 </td>
-                                <td class="text-right">{{ item.type === 'dir' ? '' : formatSize(item.size) }}</td>
-                                <td>{{ formatMtime(item.mtime) }}</td>
-                                <td>
+                                <td class="cell text-right">{{ item.type === 'dir' ? '' : formatSize(item.size) }}</td>
+                                <td class="cell">{{ formatMtime(item.mtime) }}</td>
+                                <td class="cell">
                                     <div class="d-flex">
                                         <v-btn v-if="item.type === 'file'" icon small title="別フォルダへ移動" v-on:click.stop="openRelocateDialog(item)">
                                             <v-icon small>mdi-folder-move-outline</v-icon>
@@ -454,4 +454,24 @@ export default class ExternalStorage extends Vue {
 .path-break
     word-break: break-all
     color: rgba(0, 0, 0, 0.6)
+
+// セルの上下余白を増やす (デフォルトは 0)
+::v-deep td.cell
+    padding-top: 10px !important
+    padding-bottom: 10px !important
+    height: auto !important
+
+// タイトルと対応録画の間の余白 (mt-1=4px だったのを 1px に詰める)
+.related-recordings
+    margin-top: 1px
+
+.related-recording
+    display: inline-block
+    margin-right: 10px
+    color: #333333
+    font-size: 11px
+    line-height: 1.3
+    cursor: pointer
+    &:hover
+        text-decoration: underline
 </style>
