@@ -12,7 +12,7 @@
                         <v-icon>mdi-calendar</v-icon>
                     </v-list-item-icon>
                     <v-list-item-content>
-                        <v-list-item-title>rule</v-list-item-title>
+                        <v-list-item-title>ルール編集</v-list-item-title>
                     </v-list-item-content>
                 </v-list-item>
                 <v-list-item v-on:click="search">
@@ -20,7 +20,7 @@
                         <v-icon>mdi-magnify</v-icon>
                     </v-list-item-icon>
                     <v-list-item-content>
-                        <v-list-item-title>search</v-list-item-title>
+                        <v-list-item-title>同ルールの録画</v-list-item-title>
                     </v-list-item-content>
                 </v-list-item>
                 <v-list-item v-if="recordedItem.isProtected === true" v-on:click="unprotect">
@@ -28,7 +28,7 @@
                         <v-icon>mdi-lock-open</v-icon>
                     </v-list-item-icon>
                     <v-list-item-content>
-                        <v-list-item-title>unprotect</v-list-item-title>
+                        <v-list-item-title>保護解除</v-list-item-title>
                     </v-list-item-content>
                 </v-list-item>
                 <v-list-item v-else v-on:click="protect">
@@ -36,7 +36,7 @@
                         <v-icon>mdi-lock</v-icon>
                     </v-list-item-icon>
                     <v-list-item-content>
-                        <v-list-item-title>protect</v-list-item-title>
+                        <v-list-item-title>保護</v-list-item-title>
                     </v-list-item-content>
                 </v-list-item>
                 <v-list-item v-if="recordedItem.isRecording === false && serverConfig.isEnableEncode() === true" v-on:click="openEncodeDialog">
@@ -44,7 +44,7 @@
                         <v-icon>mdi-plus-circle-outline</v-icon>
                     </v-list-item-icon>
                     <v-list-item-content>
-                        <v-list-item-title>encode</v-list-item-title>
+                        <v-list-item-title>エンコード</v-list-item-title>
                     </v-list-item-content>
                 </v-list-item>
                 <v-list-item v-if="recordedItem.isEncoding === true" v-on:click="stopEncode">
@@ -52,7 +52,7 @@
                         <v-icon>mdi-stop</v-icon>
                     </v-list-item-icon>
                     <v-list-item-content>
-                        <v-list-item-title>stop</v-list-item-title>
+                        <v-list-item-title>エンコード停止</v-list-item-title>
                     </v-list-item-content>
                 </v-list-item>
                 <v-list-item
@@ -63,7 +63,7 @@
                         <v-icon>mdi-folder-move-outline</v-icon>
                     </v-list-item-icon>
                     <v-list-item-content>
-                        <v-list-item-title>move to external</v-list-item-title>
+                        <v-list-item-title>外部ストレージへ移動</v-list-item-title>
                     </v-list-item-content>
                 </v-list-item>
                 <v-list-item v-on:click="openDeleteDialog">
@@ -71,7 +71,7 @@
                         <v-icon>mdi-delete</v-icon>
                     </v-list-item-icon>
                     <v-list-item-content>
-                        <v-list-item-title>delete</v-list-item-title>
+                        <v-list-item-title>削除</v-list-item-title>
                     </v-list-item-content>
                 </v-list-item>
             </v-list>
