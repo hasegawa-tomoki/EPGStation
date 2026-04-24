@@ -1,4 +1,5 @@
 import { Operation } from 'express-openapi';
+import IRecordedDB from '../../../db/IRecordedDB';
 import IMoveJobManager from '../../externalStorageMove/IMoveJobManager';
 import container from '../../../ModelContainer';
 import * as api from '../../api';
@@ -24,6 +25,7 @@ function toApi(job: import('../../externalStorageMove/IMoveJobManager').MoveJob)
 
 export const post: Operation = async (req, res) => {
     const manager = container.get<IMoveJobManager>('IMoveJobManager');
+    const recordedDB = container.get<IRecordedDB>('IRecordedDB');
     try {
         const body = req.body ?? {};
         if (!Array.isArray(body.recordedIds) || body.recordedIds.length === 0) {
@@ -34,8 +36,22 @@ export const post: Operation = async (req, res) => {
             api.responseServerError(res, 'storageName is required');
             return;
         }
+
+        // 既に外部ストレージへ移動済みの録画は除外してジョブを作る
+        const filteredIds: number[] = [];
+        for (const id of body.recordedIds) {
+            const recorded = await recordedDB.findId(id);
+            if (recorded === null) continue;
+            if (typeof recorded.externalPath === 'string' && recorded.externalPath.length > 0) continue;
+            filteredIds.push(id);
+        }
+        if (filteredIds.length === 0) {
+            api.responseServerError(res, 'no recordedIds to move');
+            return;
+        }
+
         const job = manager.submit({
-            recordedIds: body.recordedIds,
+            recordedIds: filteredIds,
             storageName: body.storageName,
             subDirectory:
                 typeof body.subDirectory === 'string' && body.subDirectory.length > 0 ? body.subDirectory : null,
