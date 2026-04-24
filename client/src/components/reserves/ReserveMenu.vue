@@ -12,7 +12,7 @@
                         <v-icon>mdi-filmstrip-box-multiple</v-icon>
                     </v-list-item-icon>
                     <v-list-item-content>
-                        <v-list-item-title>recorded</v-list-item-title>
+                        <v-list-item-title>録画済</v-list-item-title>
                     </v-list-item-content>
                 </v-list-item>
                 <v-list-item v-if="!!disableEdit === false" v-on:click="goToEdit">
@@ -20,7 +20,7 @@
                         <v-icon>mdi-pencil</v-icon>
                     </v-list-item-icon>
                     <v-list-item-content>
-                        <v-list-item-title>edit</v-list-item-title>
+                        <v-list-item-title>ルール編集</v-list-item-title>
                     </v-list-item-content>
                 </v-list-item>
                 <v-list-item v-if="reserveItem.isConflict !== true" v-on:click="onClickDelete">
@@ -72,7 +72,13 @@ export default class ReserveMenu extends Vue {
     }
 
     public getDeleteMenuText(): string {
-        return this.reserveItem.isSkip === true || this.reserveItem.isOverlap === true ? 'unlock' : 'delete';
+        if (this.reserveItem.isSkip === true) {
+            return '除外解除';
+        }
+        if (this.reserveItem.isOverlap === true) {
+            return '重複解除';
+        }
+        return '削除';
     }
 
     public async onClickDelete(): Promise<void> {
