@@ -1,3 +1,4 @@
+import diskusage from 'diskusage-ng';
 import { inject, injectable } from 'inversify';
 import { mkdirp } from 'mkdirp';
 import * as path from 'path';
@@ -737,6 +738,27 @@ export default class RecordedManageModel implements IRecordedManageModel {
                     throw err;
                 }
             }
+        }
+
+        // 移動先の空き容量チェック
+        let totalSize = 0;
+        for (const sd of allSrcDests) {
+            totalSize += await FileUtil.getFileSize(sd.src);
+        }
+        const available = await new Promise<number>((resolve, reject) => {
+            diskusage(targetDir, (err, usage) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(usage.available);
+                }
+            });
+        });
+        if (totalSize > available) {
+            this.log.system.error(
+                `insufficient storage: recordedId=${option.recordedId} needed=${totalSize} available=${available}`,
+            );
+            throw new Error('InsufficientStorageSpace');
         }
 
         // 実移動: copy → unlink、エラー時はすでに移動済みのファイルをロールバック(best effort)
