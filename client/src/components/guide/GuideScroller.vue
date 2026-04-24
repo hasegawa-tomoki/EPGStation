@@ -7,6 +7,9 @@
 <script lang="ts">
 import { Component, Vue } from 'vue-property-decorator';
 
+// mousedown 位置から px 以下の移動はクリック扱い (ドラッグスクロール化しない)
+const DRAG_THRESHOLD_PX = 6;
+
 @Component({})
 export default class GuideScroller extends Vue {
     public isDraging: boolean = false;
@@ -14,6 +17,8 @@ export default class GuideScroller extends Vue {
     private isPushed: boolean = false; // 押されているか
     private baseClientX: number = 0;
     private baseClientY: number = 0;
+    private downClientX: number = 0; // mousedown 時の座標 (閾値判定用)
+    private downClientY: number = 0;
     private clickTimer: number | undefined;
 
     // 各種イベントリスナー
@@ -47,6 +52,8 @@ export default class GuideScroller extends Vue {
         this.isPushed = true;
         this.baseClientX = e.clientX;
         this.baseClientY = e.clientY;
+        this.downClientX = e.clientX;
+        this.downClientY = e.clientY;
     }
 
     public onMouseup(): void {
@@ -56,6 +63,16 @@ export default class GuideScroller extends Vue {
     public onMousemove(e: MouseEvent): void {
         if (this.isPushed === false) {
             return;
+        }
+
+        // まだドラッグ判定していないなら、mousedown 位置からの距離が閾値を超えるまで
+        // クリック扱いのままにする (isDraging=false → pointer-events 通常 → click 発火)
+        if (this.isDraging === false) {
+            const dx = e.clientX - this.downClientX;
+            const dy = e.clientY - this.downClientY;
+            if (dx * dx + dy * dy <= DRAG_THRESHOLD_PX * DRAG_THRESHOLD_PX) {
+                return;
+            }
         }
 
         this.isDraging = true;
