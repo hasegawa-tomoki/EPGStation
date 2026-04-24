@@ -840,6 +840,8 @@ components:
                     $ref: '#/components/schemas/ReserveId'
                 ruleId:
                     $ref: '#/components/schemas/RuleId'
+                ruleName:
+                    type: string
                 isSkip:
                     type: boolean
                 isConflict:

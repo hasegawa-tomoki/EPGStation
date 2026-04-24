@@ -16,6 +16,10 @@
                         <div class="subtitle-2 font-weight-light">{{ reserve.display.channelName }}</div>
                         <div class="caption font-weight-light mb-2">
                             {{ reserve.display.day }}({{ reserve.display.dow }}) {{ reserve.display.startTime }} ~ {{ reserve.display.endTime }} ({{ reserve.display.duration }}分)
+                            <span v-if="reserve.display.isRule === true && reserve.display.ruleName" class="ml-2">
+                                <v-icon class="reserve-icon">mdi-calendar</v-icon>
+                                {{ reserve.display.ruleName }}
+                            </span>
                         </div>
                         <div class="body-2 font-weight-light">{{ reserve.display.description }}</div>
                     </v-list-item-content>

@@ -1,45 +1,37 @@
 <template>
     <div>
-        <v-card class="mx-auto reserves-table" max-width="1600px">
-            <v-simple-table>
-                <template v-slot:default>
-                    <thead>
-                        <tr>
-                            <th class="channel">放送局</th>
-                            <th class="day">日付</th>
-                            <th class="time">時間</th>
-                            <th>番組名</th>
-                            <th>内容</th>
-                            <th class="menu"></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr
-                            v-for="reserve in reserves"
-                            v-bind:key="reserve.reserveItem.id"
-                            v-bind:class="{ 'selected-color': reserve.isSelected === true }"
-                            v-on:click="clickItem(reserve)"
-                        >
-                            <td>{{ reserve.display.channelName }}</td>
-                            <td>{{ reserve.display.day }}({{ reserve.display.dow }})</td>
-                            <td>
-                                {{ reserve.display.startTime }}~{{ reserve.display.endTime }}
-                                <div>({{ reserve.display.duration }}m)</div>
-                            </td>
-                            <td>
-                                <v-icon v-if="reserve.display.isRule === true" class="reserve-icon">mdi-calendar</v-icon>
-                                <v-icon v-else class="reserve-icon">mdi-timer-outline</v-icon>
-                                {{ reserve.display.name }}
-                            </td>
-                            <td>{{ reserve.display.description }}</td>
-                            <td>
-                                <ReserveMenu v-if="isEditMode === false" :reserveItem="reserve.reserveItem" :disableEdit="false"></ReserveMenu>
-                            </td>
-                        </tr>
-                    </tbody>
-                </template>
-            </v-simple-table>
-        </v-card>
+        <div class="mx-auto reserves-list" style="max-width: 1600px">
+            <v-card
+                v-for="reserve in reserves"
+                v-bind:key="reserve.reserveItem.id"
+                v-bind:class="{ 'selected-color': reserve.isSelected === true }"
+                class="reserve-item my-2"
+                v-on:click="clickItem(reserve)"
+            >
+                <div class="d-flex pa-3 align-start">
+                    <div class="left-col">
+                        <div class="meta caption text--secondary">
+                            <span>{{ reserve.display.day }}({{ reserve.display.dow }})</span>
+                            <span class="ml-2">{{ reserve.display.startTime }}〜{{ reserve.display.endTime }}</span>
+                            <span class="ml-2">({{ reserve.display.duration }}分)</span>
+                            <span class="ml-2">{{ reserve.display.channelName }}</span>
+                            <span v-if="reserve.display.isRule === true && reserve.display.ruleName" class="ml-2">
+                                <v-icon class="reserve-icon">mdi-calendar</v-icon>
+                                {{ reserve.display.ruleName }}
+                            </span>
+                        </div>
+                        <div class="name subtitle-1 font-weight-medium mt-1">
+                            <v-icon v-if="reserve.display.isRule === false" class="reserve-icon">mdi-timer-outline</v-icon>
+                            {{ reserve.display.name }}
+                        </div>
+                    </div>
+                    <div class="right-col body-2 text--secondary ml-4">{{ reserve.display.description }}</div>
+                    <div class="menu-col ml-2">
+                        <ReserveMenu v-if="isEditMode === false" :reserveItem="reserve.reserveItem" :disableEdit="false"></ReserveMenu>
+                    </div>
+                </div>
+            </v-card>
+        </div>
         <ReserveDialog :isOpen.sync="isOpenDialog" :reserve="dialogReserve"></ReserveDialog>
     </div>
 </template>
@@ -82,22 +74,21 @@ export default class ReservesTableItems extends Vue {
 </script>
 
 <style lang="sass" scoped>
-.reserves-table
+.reserves-list
     cursor: pointer
-    .channel
-        min-width: 160px
-    .day
-        min-width: 96px
-    .time
-        min-width: 110px
-    .menu
-        width: 68px
 
-    tbody > tr > td
-        padding-top: 8px !important
-        padding-bottom: 8px !important
+.reserve-item
+    .left-col
+        flex: 0 0 40%
+        min-width: 0
+    .right-col
+        flex: 1 1 auto
+        min-width: 0
+        word-break: break-all
+    .menu-col
+        flex: 0 0 auto
 
     .reserve-icon
-        font-size: 20px !important
+        font-size: 18px !important
         padding-bottom: 2px
 </style>

@@ -2,6 +2,7 @@ import { inject, injectable } from 'inversify';
 import * as apid from '../../../../api';
 import Reserve from '../../../db/entities/Reserve';
 import IReserveDB from '../../db/IReserveDB';
+import IRuleDB from '../../db/IRuleDB';
 import IIPCClient from '../../ipc/IIPCClient';
 import IReserveApiModel from './IReserveApiModel';
 
@@ -9,10 +10,16 @@ import IReserveApiModel from './IReserveApiModel';
 export default class ReserveApiModel implements IReserveApiModel {
     private ipc: IIPCClient;
     private reserveDB: IReserveDB;
+    private ruleDB: IRuleDB;
 
-    constructor(@inject('IIPCClient') ipc: IIPCClient, @inject('IReserveDB') reserveDB: IReserveDB) {
+    constructor(
+        @inject('IIPCClient') ipc: IIPCClient,
+        @inject('IReserveDB') reserveDB: IReserveDB,
+        @inject('IRuleDB') ruleDB: IRuleDB,
+    ) {
         this.ipc = ipc;
         this.reserveDB = reserveDB;
+        this.ruleDB = ruleDB;
     }
 
     /**
@@ -42,8 +49,11 @@ export default class ReserveApiModel implements IReserveApiModel {
      */
     public async get(reserveId: apid.ReserveId, isHalfWidth: boolean): Promise<apid.ReserveItem | null> {
         const reserve = await this.reserveDB.findId(reserveId);
-
-        return reserve === null ? null : this.toReserveItem(reserve, isHalfWidth);
+        if (reserve === null) {
+            return null;
+        }
+        const ruleNameMap = await this.buildRuleNameMap([reserve]);
+        return this.toReserveItem(reserve, isHalfWidth, ruleNameMap);
     }
 
     /**
@@ -53,13 +63,40 @@ export default class ReserveApiModel implements IReserveApiModel {
      */
     public async gets(option: apid.GetReserveOption): Promise<apid.Reserves> {
         const [reserves, total] = await this.reserveDB.findAll(option);
+        const ruleNameMap = await this.buildRuleNameMap(reserves);
 
         return {
             reserves: reserves.map(r => {
-                return this.toReserveItem(r, option.isHalfWidth);
+                return this.toReserveItem(r, option.isHalfWidth, ruleNameMap);
             }),
             total,
         };
+    }
+
+    /**
+     * reserves に含まれる ruleId から ruleId → keyword (ルール名) のマップを構築する
+     */
+    private async buildRuleNameMap(reserves: Reserve[]): Promise<Map<apid.RuleId, string>> {
+        const map = new Map<apid.RuleId, string>();
+        const ruleIds = new Set<apid.RuleId>();
+        for (const r of reserves) {
+            if (r.ruleId !== null) {
+                ruleIds.add(r.ruleId);
+            }
+        }
+        await Promise.all(
+            Array.from(ruleIds).map(async id => {
+                const rule = await this.ruleDB.findId(id);
+                if (
+                    rule !== null &&
+                    typeof rule.searchOption?.keyword === 'string' &&
+                    rule.searchOption.keyword.length > 0
+                ) {
+                    map.set(id, rule.searchOption.keyword);
+                }
+            }),
+        );
+        return map;
     }
 
     /**
@@ -68,7 +105,11 @@ export default class ReserveApiModel implements IReserveApiModel {
      * @param isHalfWidth: boolean 半角文字で返すか
      * @return ReserveItem
      */
-    private toReserveItem(reserve: Reserve, isHalfWidth: boolean): apid.ReserveItem {
+    private toReserveItem(
+        reserve: Reserve,
+        isHalfWidth: boolean,
+        ruleNameMap: Map<apid.RuleId, string>,
+    ): apid.ReserveItem {
         const item: apid.ReserveItem = {
             id: reserve.id,
             isSkip: reserve.isSkip,
@@ -85,6 +126,10 @@ export default class ReserveApiModel implements IReserveApiModel {
 
         if (reserve.ruleId !== null) {
             item.ruleId = reserve.ruleId;
+            const ruleName = ruleNameMap.get(reserve.ruleId);
+            if (typeof ruleName === 'string') {
+                item.ruleName = ruleName;
+            }
         }
         if (reserve.tags !== null) {
             item.tags = JSON.parse(reserve.tags);

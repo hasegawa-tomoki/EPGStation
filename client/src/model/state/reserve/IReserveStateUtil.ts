@@ -8,6 +8,7 @@ export interface ReserveStateData {
     display: {
         channelName: string;
         isRule: boolean;
+        ruleName?: string;
         name: string;
         day: string;
         dow: string;
