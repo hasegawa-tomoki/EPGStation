@@ -26,6 +26,14 @@ export default class StorageApiModel implements IStorageApiModel {
             items.push(info as apid.StorageItem);
         }
 
+        if (typeof this.config.externalStorage !== 'undefined') {
+            for (const e of this.config.externalStorage) {
+                const info = await this.getDiskInfo(e.path);
+                (info as apid.StorageItem).name = e.name;
+                items.push(info as apid.StorageItem);
+            }
+        }
+
         return {
             items: items,
         };
