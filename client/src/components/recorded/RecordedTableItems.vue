@@ -27,8 +27,10 @@
                         </span>
                     </div>
                     <div class="name subtitle-1 font-weight-medium mt-1">
-                        <span v-if="item.display.isExternal === true" class="nas-badge">NAS</span>
                         {{ item.display.name }}
+                    </div>
+                    <div v-if="item.display.isExternal === true" class="mt-1">
+                        <span class="nas-badge">NAS</span>
                     </div>
                 </div>
                 <div class="menu ml-2">
