@@ -8,6 +8,14 @@
             v-on:click="gotoDetail(item)"
         >
             <div class="d-flex pa-3 align-start">
+                <v-img
+                    class="thumbnail mr-3"
+                    aspect-ratio="1.7778"
+                    width="120"
+                    :src="item.display.topThumbnailPath"
+                    v-on:error="$event.target.src = './img/noimg.png'"
+                    :eager="true"
+                ></v-img>
                 <div class="content">
                     <div class="meta caption text--secondary">
                         <span>{{ item.display.shortTime }}</span>
@@ -81,6 +89,8 @@ export default class RecordedTableItems extends Vue {
     cursor: pointer
 
 .recorded-row
+    .thumbnail
+        flex: 0 0 120px
     .content
         flex: 1 1 auto
         min-width: 0
