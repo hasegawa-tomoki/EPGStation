@@ -1,34 +1,34 @@
 <template>
-    <v-card class="mx-auto recorded-table" max-width="1000px">
-        <v-simple-table>
-            <template v-slot:default>
-                <thead>
-                    <tr>
-                        <th>タイトル</th>
-                        <th class="channel">放送局</th>
-                        <th class="time">時間</th>
-                        <th class="rule">ルール</th>
-                        <th class="menu"></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr v-for="item in items" v-bind:key="item.id" v-on:click="gotoDetail(item)" v-bind:class="{ 'selected-color': item.isSelected === true }">
-                        <td>
-                            <span v-if="item.display.isExternal === true" class="nas-badge">NAS</span>
-                            {{ item.display.name }}
-                        </td>
-                        <td>{{ item.display.channelName }}</td>
-                        <td>{{ item.display.shortTime }} ({{ item.display.duration }} m)</td>
-                        <td class="rule">
-                            <span v-if="typeof item.display.ruleId !== 'undefined'" class="rule-link" v-on:click.stop="openRule(item)">{{ item.display.ruleName }}</span>
-                        </td>
-                        <td class="menu">
-                            <RecordedItemMenu v-if="isEditMode === false" :recordedItem="item.recordedItem" v-on:stopEncode="stopEncode"></RecordedItemMenu>
-                        </td>
-                    </tr>
-                </tbody>
-            </template>
-        </v-simple-table>
+    <v-card class="mx-auto recorded-list" max-width="1000px">
+        <div
+            v-for="(item, index) in items"
+            v-bind:key="item.recordedItem.id"
+            v-bind:class="{ 'selected-color': item.isSelected === true }"
+            class="recorded-row"
+            v-on:click="gotoDetail(item)"
+        >
+            <div class="d-flex pa-3 align-start">
+                <div class="content">
+                    <div class="meta caption text--secondary">
+                        <span>{{ item.display.shortTime }}</span>
+                        <span class="ml-2">({{ item.display.duration }}m)</span>
+                        <span class="ml-2">{{ item.display.channelName }}</span>
+                        <span v-if="typeof item.display.ruleId !== 'undefined'" class="ml-2 rule-link" v-on:click.stop="openRule(item)">
+                            <v-icon class="rule-icon">mdi-calendar</v-icon>
+                            {{ item.display.ruleName }}
+                        </span>
+                    </div>
+                    <div class="name subtitle-1 font-weight-medium mt-1">
+                        <span v-if="item.display.isExternal === true" class="nas-badge">NAS</span>
+                        {{ item.display.name }}
+                    </div>
+                </div>
+                <div class="menu ml-2">
+                    <RecordedItemMenu v-if="isEditMode === false" :recordedItem="item.recordedItem" v-on:stopEncode="stopEncode"></RecordedItemMenu>
+                </div>
+            </div>
+            <v-divider v-if="index < items.length - 1"></v-divider>
+        </div>
     </v-card>
 </template>
 
@@ -77,21 +77,22 @@ export default class RecordedTableItems extends Vue {
 </script>
 
 <style lang="sass" scoped>
-.recorded-table
+.recorded-list
     cursor: pointer
-    .channel
-        min-width: 180px
-    .time
-        width: 190px
-    .rule
-        max-width: 200px
-        overflow: hidden
-        text-overflow: ellipsis
-        white-space: nowrap
-        .rule-link
-            text-decoration: underline
+
+.recorded-row
+    .content
+        flex: 1 1 auto
+        min-width: 0
     .menu
-        width: 68px
+        flex: 0 0 auto
+
+    .rule-link
+        text-decoration: underline
+    .rule-icon
+        font-size: 16px !important
+        padding-bottom: 2px
+
     .nas-badge
         display: inline-block
         padding: 1px 4px

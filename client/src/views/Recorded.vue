@@ -12,6 +12,9 @@
         ></EditTitleBar>
         <TitleBar v-else title="録画済み">
             <template v-slot:menu>
+                <v-btn v-if="settingValue !== null" icon v-on:click="toggleTableMode" :title="settingValue.isShowTableMode ? 'カード表示に切替' : 'リスト表示に切替'">
+                    <v-icon>{{ settingValue.isShowTableMode ? 'mdi-view-grid-outline' : 'mdi-format-list-bulleted' }}</v-icon>
+                </v-btn>
                 <RecordedSearchMenu></RecordedSearchMenu>
                 <RecordedMainMenu v-on:edit="onEdit" v-on:cleanup="onCleanup"></RecordedMainMenu>
             </template>
@@ -192,6 +195,13 @@ export default class Recorded extends Vue {
 
     public onCleanup(): void {
         this.isOpenCleanupDialog = true;
+    }
+
+    public toggleTableMode(): void {
+        if (this.settingValue === null) return;
+        this.setting.tmp.isShowTableMode = !this.setting.tmp.isShowTableMode;
+        this.setting.save();
+        this.settingValue = this.setting.getSavedValue();
     }
 
     public onBulkMoveExternal(): void {

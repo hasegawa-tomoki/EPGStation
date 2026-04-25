@@ -69,14 +69,27 @@
                                 <td class="cell text-right">{{ item.type === 'dir' ? '' : formatSize(item.size) }}</td>
                                 <td class="cell">{{ formatMtime(item.mtime) }}</td>
                                 <td class="cell">
-                                    <div class="d-flex">
-                                        <v-btn v-if="item.type === 'file'" icon small title="別フォルダへ移動" v-on:click.stop="openRelocateDialog(item)">
-                                            <v-icon small>mdi-folder-move-outline</v-icon>
-                                        </v-btn>
-                                        <v-btn icon small title="リネーム" v-on:click.stop="openRenameDialog(item)">
-                                            <v-icon small>mdi-pencil</v-icon>
-                                        </v-btn>
-                                    </div>
+                                    <v-menu bottom left offset-y>
+                                        <template v-slot:activator="{ on }">
+                                            <v-btn icon small v-on="on" v-on:click.stop="">
+                                                <v-icon>mdi-dots-vertical</v-icon>
+                                            </v-btn>
+                                        </template>
+                                        <v-list dense>
+                                            <v-list-item v-if="item.type === 'file'" v-on:click="openRelocateDialog(item)">
+                                                <v-list-item-icon class="mr-3">
+                                                    <v-icon>mdi-folder-move-outline</v-icon>
+                                                </v-list-item-icon>
+                                                <v-list-item-title>別フォルダへ移動</v-list-item-title>
+                                            </v-list-item>
+                                            <v-list-item v-on:click="openRenameDialog(item)">
+                                                <v-list-item-icon class="mr-3">
+                                                    <v-icon>mdi-pencil</v-icon>
+                                                </v-list-item-icon>
+                                                <v-list-item-title>リネーム</v-list-item-title>
+                                            </v-list-item>
+                                        </v-list>
+                                    </v-menu>
                                 </td>
                             </tr>
                             <tr v-if="list.items.length === 0 && list.subPath.length === 0">

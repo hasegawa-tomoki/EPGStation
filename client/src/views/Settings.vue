@@ -177,13 +177,6 @@
                                 </div>
                                 <div class="my-2 d-flex flex-row align-center">
                                     <div>
-                                        <v-list-item-title class="subtitle-1">テーブル表示</v-list-item-title>
-                                    </div>
-                                    <v-spacer></v-spacer>
-                                    <v-switch v-model="storageModel.tmp.isShowTableMode" value></v-switch>
-                                </div>
-                                <div class="my-2 d-flex flex-row align-center">
-                                    <div>
                                         <v-list-item-title class="subtitle-1">ドロップ情報を表示する</v-list-item-title>
                                         <v-list-item-subtitle>概要の代わりにドロップとファイルサイズ情報を表示する</v-list-item-subtitle>
                                     </div>
