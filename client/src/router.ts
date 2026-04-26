@@ -4,6 +4,7 @@ import { Position, Route } from 'vue-router/types/router';
 import container from './model/ModelContainer';
 import IScrollPositionState from './model/state/IScrollPositionState';
 import Dashboard from './views/Dashboard.vue';
+import Login from './views/Login.vue';
 import Encode from './views/Encode.vue';
 import ExternalStorage from './views/ExternalStorage.vue';
 import Guide from './views/Guide.vue';
@@ -28,6 +29,12 @@ Vue.use(Router);
 
 export default new Router({
     routes: [
+        {
+            path: '/login',
+            name: 'login',
+            component: Login,
+            meta: { public: true },
+        },
         {
             path: '/',
             name: 'dashboard',

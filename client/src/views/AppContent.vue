@@ -1,7 +1,7 @@
 <template>
     <v-app class="app-content-root">
-        <div v-if="isDisconnected === true" class="disconnected"></div>
-        <Navigation></Navigation>
+        <div v-if="isDisconnected === true && isLoginRoute === false" class="disconnected"></div>
+        <Navigation v-if="isLoginRoute === false"></Navigation>
         <router-view></router-view>
         <Snackbar></Snackbar>
     </v-app>
@@ -36,6 +36,11 @@ export default class AppContent extends Vue {
         // theme 設定を反映
         this.$vuetify.theme.dark = this.colorThemeState.isDarkTheme();
 
+        // /login では socket.io を張らない (未認証で 401 が返るため)
+        if (this.isLoginRoute === true) {
+            return;
+        }
+
         // socket.io 設定
         try {
             this.socketIoModel.Iinitialize();
@@ -47,6 +52,10 @@ export default class AppContent extends Vue {
                 timeout: 5000,
             });
         }
+    }
+
+    get isLoginRoute(): boolean {
+        return this.$route.path === '/login';
     }
 
     /**

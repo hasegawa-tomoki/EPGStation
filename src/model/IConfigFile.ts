@@ -41,6 +41,19 @@ export interface KodiInfo {
     password?: string;
 }
 
+export interface AuthUser {
+    user: string;
+    password: string; // bcrypt ハッシュ ($2a$.../$2b$.../$2y$...) または平文
+}
+
+export interface AuthConfig {
+    secret?: string; // 未指定なら data/auth.secret に自動生成・永続化
+    cookieName?: string; // default: epgstation_auth
+    cookieMaxAgeSec?: number; // default: 31536000 (1 年)
+    users: AuthUser[];
+    trustedNetworks?: string[]; // CIDR (IPv4/IPv6)。リスト内の IP からは認証スキップ
+}
+
 /**
  * config ファイル形式
  */
@@ -198,4 +211,7 @@ export default interface IConfigFile {
 
     // 配信先 kodi 設定
     kodiHosts?: KodiInfo[];
+
+    // 認証設定 (省略時は認証無効)
+    auth?: AuthConfig;
 }

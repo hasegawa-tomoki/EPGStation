@@ -1,6 +1,7 @@
 import * as bodyParser from 'body-parser';
+import cookieParser from 'cookie-parser';
 import cors from 'cors';
-import express, { NextFunction } from 'express';
+import express, { NextFunction, Request, Response } from 'express';
 import * as openapi from 'express-openapi';
 import * as fs from 'fs';
 import * as http from 'http';
@@ -18,6 +19,8 @@ import IConfigFile from '../IConfigFile';
 import IConfiguration from '../IConfiguration';
 import ILogger from '../ILogger';
 import ILoggerModel from '../ILoggerModel';
+import AuthService from './auth/AuthService';
+import { createAuthMiddleware } from './auth/authMiddleware';
 import IServiceServer from './IServiceServer';
 import ISocketIOManageModel from './socketio/ISocketIOManageModel';
 
@@ -30,6 +33,7 @@ class ServiceServer implements IServiceServer {
     private config: IConfigFile;
     private socketIoManageModel: ISocketIOManageModel;
     private app = express();
+    private authService: AuthService | null = null;
 
     constructor(
         @inject('ILoggerModel') logger: ILoggerModel,
@@ -40,6 +44,11 @@ class ServiceServer implements IServiceServer {
         this.log = logger.getLogger();
         this.config = configuration.getConfig();
         this.socketIoManageModel = socketIoManageModel;
+
+        if (typeof this.config.auth !== 'undefined') {
+            this.authService = new AuthService(this.config.auth);
+            this.socketIoManageModel.setAuthService(this.authService);
+        }
 
         this.init();
     }
@@ -53,11 +62,79 @@ class ServiceServer implements IServiceServer {
         if (this.config.isAllowAllCORS === true) {
             this.app.use(cors());
         }
+        this.setupAuth();
         this.setSwaggerUI();
         this.createUploadDir();
         this.initOpenApi(api);
         this.setMime();
         this.setStaticFiles();
+    }
+
+    /**
+     * 認証ミドルウェア / login・logout・me エンドポイントを配線する
+     */
+    private setupAuth(): void {
+        // cookie パーサは認証無効でも害がないため常に有効化
+        this.app.use(cookieParser());
+        // X-Forwarded-* を信頼しない (リバースプロキシ運用なら別途考慮)
+        this.app.set('trust proxy', false);
+
+        const auth = this.authService;
+        if (auth === null) {
+            return;
+        }
+
+        // login / logout / me は認証ミドルウェアより前に登録
+        this.app.post(this.createUrl('/api/login'), bodyParser.json(), async (req: Request, res: Response) => {
+            const body = (req.body ?? {}) as { user?: unknown; password?: unknown };
+            const user = typeof body.user === 'string' ? body.user : '';
+            const password = typeof body.password === 'string' ? body.password : '';
+            if (user.length === 0 || password.length === 0) {
+                res.status(400).json({ code: 400, message: 'user and password are required' });
+                return;
+            }
+            const verified = await auth.verifyCredentials(user, password);
+            if (verified === null) {
+                res.status(401).json({ code: 401, message: 'invalid credentials' });
+                return;
+            }
+            const token = auth.signToken(verified);
+            const isHttps = req.secure || req.protocol === 'https';
+            res.cookie(auth.getCookieName(), token, {
+                httpOnly: true,
+                secure: isHttps,
+                sameSite: 'lax',
+                maxAge: auth.getCookieMaxAgeSec() * 1000,
+                path: typeof this.config.subDirectory === 'undefined' ? '/' : this.config.subDirectory,
+            });
+            res.json({ user: verified });
+        });
+
+        this.app.post(this.createUrl('/api/logout'), (_req: Request, res: Response) => {
+            res.clearCookie(auth.getCookieName(), {
+                path: typeof this.config.subDirectory === 'undefined' ? '/' : this.config.subDirectory,
+            });
+            res.json({ ok: true });
+        });
+
+        this.app.get(this.createUrl('/api/auth/me'), (req: Request, res: Response) => {
+            // trusted network からは無条件 OK
+            if (auth.isTrustedAddress(req.ip)) {
+                res.json({ user: 'trusted', trusted: true });
+                return;
+            }
+            const cookieName = auth.getCookieName();
+            const token = (req as any).cookies?.[cookieName];
+            const user = auth.verifyToken(token);
+            if (user === null) {
+                res.status(401).json({ code: 401, message: 'unauthorized' });
+                return;
+            }
+            res.json({ user });
+        });
+
+        // 全パス共通の認証ミドルウェア (PROTECTED_PREFIXES のみ実際に検査)
+        this.app.use(createAuthMiddleware(auth, { subDirectory: this.config.subDirectory ?? '' }));
     }
 
     /**

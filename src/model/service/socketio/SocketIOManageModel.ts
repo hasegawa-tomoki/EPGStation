@@ -6,6 +6,8 @@ import IConfigFile from '../../IConfigFile';
 import IConfiguration from '../../IConfiguration';
 import ILogger from '../../ILogger';
 import ILoggerModel from '../../ILoggerModel';
+import AuthService from '../auth/AuthService';
+import { verifySocketHandshake } from '../auth/authMiddleware';
 import ISocketIOManageModel from './ISocketIOManageModel';
 
 @injectable()
@@ -15,10 +17,15 @@ export default class SocketIOManageModel implements ISocketIOManageModel {
     private ios: SocketIO.Server[] = [];
     private callTimer: NodeJS.Timer | null = null;
     private encodeProgressCallTimer: NodeJS.Timer | null = null;
+    private authService: AuthService | null = null;
 
     constructor(@inject('ILoggerModel') logger: ILoggerModel, @inject('IConfiguration') configuration: IConfiguration) {
         this.log = logger.getLogger();
         this.config = configuration.getConfig();
+    }
+
+    public setAuthService(auth: AuthService): void {
+        this.authService = auth;
     }
 
     /**
@@ -27,17 +34,28 @@ export default class SocketIOManageModel implements ISocketIOManageModel {
      */
     public initialize(servers: http.Server[]): void {
         for (const s of servers) {
-            this.ios.push(
-                new SocketIO.Server(s, {
-                    path:
-                        typeof this.config.subDirectory === 'undefined'
-                            ? '/socket.io'
-                            : urljoin(this.config.subDirectory, '/socket.io'),
-                    cors: {
-                        origin: '*',
-                    },
-                }),
-            );
+            const io = new SocketIO.Server(s, {
+                path:
+                    typeof this.config.subDirectory === 'undefined'
+                        ? '/socket.io'
+                        : urljoin(this.config.subDirectory, '/socket.io'),
+                cors: {
+                    origin: '*',
+                },
+            });
+            if (this.authService !== null) {
+                const auth = this.authService;
+                io.use((socket, next) => {
+                    const cookieHeader = socket.handshake.headers.cookie;
+                    const remote = socket.handshake.address;
+                    if (verifySocketHandshake(auth, cookieHeader, remote)) {
+                        next();
+                    } else {
+                        next(new Error('unauthorized'));
+                    }
+                });
+            }
+            this.ios.push(io);
         }
 
         this.log.system.info('SocketIO Server has started.');

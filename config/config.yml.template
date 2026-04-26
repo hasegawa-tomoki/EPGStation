@@ -1,6 +1,28 @@
 port: 8888
 mirakurunPath: http+unix://%2Fvar%2Frun%2Fmirakurun.sock/
 
+## 認証設定 (省略すると認証無効)
+## password は bcrypt ハッシュ ($2a$.../$2b$.../$2y$...) または平文。
+## bcrypt ハッシュの生成例:
+##   node -e "console.log(require('bcryptjs').hashSync(process.argv[1], 10))" 'plaintext'
+## secret は cookie 署名用。省略時は data/auth.secret に自動生成・永続化。
+## trustedNetworks に含まれる IP からは認証スキップ (Tailscale 100.64/10 等)。
+# auth:
+#     # secret: 'put-32+chars-random-here'
+#     cookieName: epgstation_auth
+#     cookieMaxAgeSec: 31536000  # 1 年
+#     users:
+#         - user: alice
+#           password: '$2b$10$xxxxxxxxxxxxxxxxxxxxx'
+#         - user: bob
+#           password: '$2b$10$yyyyyyyyyyyyyyyyyyyyy'
+#     trustedNetworks:
+#         - 127.0.0.1/32
+#         - ::1/128
+#         - 192.168.0.0/16
+#         - 100.64.0.0/10        # Tailscale IPv4
+#         - fd7a:115c:a1e0::/48  # Tailscale IPv6
+
 dbtype: sqlite
 # sqlite:
 #   extensions:
