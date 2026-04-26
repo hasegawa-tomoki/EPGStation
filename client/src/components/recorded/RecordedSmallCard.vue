@@ -90,7 +90,7 @@ export default class RecordedSmallCard extends Vue {
 <style lang="sass" scoped>
 .recorded-small-card
     width: 100%
-    height: 100px
+    height: 124px
     cursor: pointer
 
     .thumbnail
