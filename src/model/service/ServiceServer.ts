@@ -76,8 +76,14 @@ class ServiceServer implements IServiceServer {
     private setupAuth(): void {
         // cookie パーサは認証無効でも害がないため常に有効化
         this.app.use(cookieParser());
-        // X-Forwarded-* を信頼しない (リバースプロキシ運用なら別途考慮)
-        this.app.set('trust proxy', false);
+        // 信頼するリバースプロキシ CIDR からの X-Forwarded-For を尊重する。
+        // 未指定 (= false) なら req.ip は接続元 TCP アドレスをそのまま返す。
+        const trustedProxies = this.config.auth?.trustedProxies;
+        if (typeof trustedProxies !== 'undefined' && trustedProxies.length > 0) {
+            this.app.set('trust proxy', trustedProxies);
+        } else {
+            this.app.set('trust proxy', false);
+        }
 
         const auth = this.authService;
         if (auth === null) {

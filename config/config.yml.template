@@ -7,6 +7,9 @@ mirakurunPath: http+unix://%2Fvar%2Frun%2Fmirakurun.sock/
 ##   node -e "console.log(require('bcryptjs').hashSync(process.argv[1], 10))" 'plaintext'
 ## secret は cookie 署名用。省略時は data/auth.secret に自動生成・永続化。
 ## trustedNetworks に含まれる IP からは認証スキップ (Tailscale 100.64/10 等)。
+## trustedProxies はリバースプロキシ (Apache/nginx 等) の CIDR を指定すると、
+## そこからの X-Forwarded-For を信頼して req.ip を実クライアント IP に置換する
+## (auth bypass はしない。trustedNetworks とは別の概念)。
 # auth:
 #     # secret: 'put-32+chars-random-here'
 #     cookieName: epgstation_auth
@@ -22,6 +25,9 @@ mirakurunPath: http+unix://%2Fvar%2Frun%2Fmirakurun.sock/
 #         - 192.168.0.0/16
 #         - 100.64.0.0/10        # Tailscale IPv4
 #         - fd7a:115c:a1e0::/48  # Tailscale IPv6
+#     trustedProxies:
+#         - 172.16.0.0/12        # Docker bridge 帯 (Apache が同居)
+#         - 127.0.0.1/32
 
 dbtype: sqlite
 # sqlite:

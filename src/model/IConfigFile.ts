@@ -52,6 +52,9 @@ export interface AuthConfig {
     cookieMaxAgeSec?: number; // default: 31536000 (1 年)
     users: AuthUser[];
     trustedNetworks?: string[]; // CIDR (IPv4/IPv6)。リスト内の IP からは認証スキップ
+    // X-Forwarded-For を信頼するリバースプロキシの CIDR。Apache 等の前段経由の場合はここで指定
+    // (Express の trust proxy 設定。trustedNetworks には含めず、proxy の置換だけ行う)
+    trustedProxies?: string[];
 }
 
 /**
