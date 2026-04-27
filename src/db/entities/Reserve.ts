@@ -316,4 +316,10 @@ export default class Reserve extends BaseEntity {
         nullable: true,
     })
     public audioComponentType: number | null = null;
+
+    @Column({
+        type: 'text',
+        nullable: true,
+    })
+    public createdUser: string | null = null; // 予約を作成したログインユーザー名 (rule 由来は rule.createdUser を継承、trusted は null)
 }

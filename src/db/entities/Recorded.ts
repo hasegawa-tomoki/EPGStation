@@ -213,4 +213,10 @@ export default class Recorded extends BaseEntity {
     @ManyToMany(() => RecordedTag)
     @JoinTable()
     public tags!: RecordedTag[];
+
+    @Column({
+        type: 'text',
+        nullable: true,
+    })
+    public createdUser?: string | null; // 録画作成ログインユーザー名 (reserve.createdUser を継承、trusted は null)
 }

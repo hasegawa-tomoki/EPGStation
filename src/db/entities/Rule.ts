@@ -274,4 +274,10 @@ export default class Rule extends BaseEntity {
         default: false,
     })
     public isDeleteOriginalAfterEncode: boolean = false;
+
+    @Column({
+        type: 'text',
+        nullable: true,
+    })
+    public createdUser: string | null = null; // 作成したログインユーザー名 (trusted/未認証は null)
 }
