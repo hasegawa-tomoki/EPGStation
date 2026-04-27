@@ -37,8 +37,7 @@ export default class RecordedUtil implements IRecordedUtil {
                 hasDrop: false,
                 isExternal: typeof item.externalPath === 'string' && item.externalPath.length > 0,
                 externalPath: item.externalPath,
-                createdUser:
-                    typeof item.createdUser === 'string' && item.createdUser.length > 0 ? item.createdUser : undefined,
+                createdUser: typeof item.createdUser === 'string' && item.createdUser.length > 0 ? item.createdUser : undefined,
             },
             recordedItem: item,
             isSelected: false,
