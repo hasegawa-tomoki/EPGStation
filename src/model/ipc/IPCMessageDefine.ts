@@ -29,6 +29,7 @@ export interface ClientMessageOption {
     model: ModelName;
     func: string;
     args?: any;
+    authUser?: string | null; // 呼び出し元 (API process) の AuthContext ユーザを伝搬
 }
 
 /**

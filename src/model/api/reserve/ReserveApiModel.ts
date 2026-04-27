@@ -233,6 +233,9 @@ export default class ReserveApiModel implements IReserveApiModel {
         if (reserve.audioSamplingRate !== null) {
             item.audioSamplingRate = <any>reserve.audioSamplingRate;
         }
+        if (typeof reserve.createdUser === 'string' && reserve.createdUser.length > 0) {
+            item.createdUser = reserve.createdUser;
+        }
 
         return item;
     }

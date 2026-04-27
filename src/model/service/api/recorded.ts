@@ -41,6 +41,9 @@ export const get: Operation = async (req, res) => {
         if (typeof req.query.isExternal !== 'undefined') {
             option.isExternal = req.query.isExternal as any;
         }
+        if (typeof req.query.createdUser === 'string' && req.query.createdUser.length > 0) {
+            option.createdUser = req.query.createdUser;
+        }
 
         api.responseJSON(res, 200, await recordedApiModel.gets(option));
     } catch (err: any) {
@@ -85,6 +88,9 @@ get.apiDoc = {
         },
         {
             $ref: '#/components/parameters/QueryIsExternal',
+        },
+        {
+            $ref: '#/components/parameters/QueryCreatedUser',
         },
     ],
     responses: {

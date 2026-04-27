@@ -9,6 +9,7 @@ import {
     MoveToExternalStorageOption,
     UploadedVideoFileOption,
 } from '../operator/recorded/IRecordedManageModel';
+import AuthContext from '../service/auth/AuthContext';
 import IEncodeManageModel from '../service/encode/IEncodeManageModel';
 import ISocketIOManageModel from '../service/socketio/ISocketIOManageModel';
 import IIPCClient, {
@@ -103,6 +104,7 @@ export default class IPCClient implements IIPCClient {
             model: option.model,
             func: option.func,
             args: option.args,
+            authUser: AuthContext.getCurrentUser(),
         };
 
         process.nextTick(() => {

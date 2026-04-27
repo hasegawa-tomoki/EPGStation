@@ -146,6 +146,7 @@ export interface ReserveItem {
     videoComponentType?: number;
     audioSamplingRate?: ProgramAudioSamplingRate;
     audioComponentType?: number;
+    createdUser?: string; // 予約を作成したログインユーザー名
 }
 
 /**
@@ -200,6 +201,7 @@ export interface BroadcastStatus {
 export interface Rule extends AddRuleOption {
     id: RuleId;
     reservesCnt?: number;
+    createdUser?: string; // 作成したログインユーザー名
 }
 
 export interface RuleKeywordItem {
@@ -383,6 +385,7 @@ export interface RecordedItem {
     tags?: RecordedTag[];
     isEncoding: boolean;
     isProtected: boolean;
+    createdUser?: string; // 録画作成したログインユーザー名
 }
 
 /**
@@ -432,6 +435,7 @@ export interface GetRecordedOption {
     hasOriginalFile?: boolean;
     isInternal?: boolean;
     isExternal?: boolean;
+    createdUser?: string; // 作成ユーザー名で絞り込み
 }
 
 /**

@@ -162,6 +162,10 @@ export default class RecordedItemUtil implements IRecordedItemUtil {
             });
         }
 
+        if (typeof recorded.createdUser === 'string' && recorded.createdUser.length > 0) {
+            item.createdUser = recorded.createdUser;
+        }
+
         return item;
     }
 }

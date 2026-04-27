@@ -20,6 +20,7 @@ import IConfigFile from '../../IConfigFile';
 import IConfiguration from '../../IConfiguration';
 import ILogger from '../../ILogger';
 import ILoggerModel from '../../ILoggerModel';
+import AuthContext from '../../service/auth/AuthContext';
 import IRecordingManageModel from '../recording/IRecordingManageModel';
 import IRecordedManageModel, {
     AddVideoFileOption,
@@ -391,6 +392,8 @@ export default class RecordedManageModel implements IRecordedManageModel {
         const recorded = new Recorded();
         recorded.isRecording = false;
         recorded.isProtected = false;
+        // アップロードからの新規録画作成: AuthContext からユーザを取得
+        recorded.createdUser = AuthContext.getCurrentUser();
         if (typeof option.ruleId !== 'undefined') {
             recorded.ruleId = option.ruleId;
         }

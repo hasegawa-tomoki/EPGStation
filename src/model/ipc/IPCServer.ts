@@ -12,6 +12,7 @@ import IRecordingManageModel from '../operator/recording/IRecordingManageModel';
 import IReservationManageModel from '../operator/reservation/IReservationManageModel';
 import IRuleManageModel from '../operator/rule/IRuleManageModel';
 import IThumbnailManageModel from '../operator/thumbnail/IThumbnailManageModel';
+import AuthContext from '../service/auth/AuthContext';
 import IIPCServer from './IIPCServer';
 import {
     OperatorEncodeEventFunctions,
@@ -75,19 +76,22 @@ export default class IPCServer implements IIPCServer {
                 typeof this.functions[msg.model] !== 'undefined' &&
                 typeof this.functions[msg.model][msg.func] !== 'undefined'
             ) {
-                // 指定された関数が存在するなら実行
-                try {
-                    const result = await this.functions[msg.model][msg.func](msg);
-                    this.replay({
-                        id: msg.id,
-                        result: result,
-                    });
-                } catch (err: any) {
-                    this.replay({
-                        id: msg.id,
-                        error: err.message,
-                    });
-                }
+                // 呼び出し元 (API process) の AuthContext を引き継いで実行する
+                const authUser = typeof msg.authUser === 'string' ? msg.authUser : null;
+                await AuthContext.run(authUser, async () => {
+                    try {
+                        const result = await this.functions[msg.model][msg.func](msg);
+                        this.replay({
+                            id: msg.id,
+                            result: result,
+                        });
+                    } catch (err: any) {
+                        this.replay({
+                            id: msg.id,
+                            error: err.message,
+                        });
+                    }
+                });
             } else {
                 this.replay({
                     id: msg.id,

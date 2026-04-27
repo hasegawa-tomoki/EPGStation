@@ -395,6 +395,16 @@ export default class RecordedDB implements IRecordedDB {
             });
         }
 
+        // created user (作成者完全一致)
+        if (typeof option.createdUser === 'string' && option.createdUser.length > 0) {
+            querys.push({
+                query: 'recorded.createdUser = :createdUser',
+                values: {
+                    createdUser: option.createdUser,
+                },
+            });
+        }
+
         // genre
         if (typeof option.genre !== 'undefined') {
             querys.push({

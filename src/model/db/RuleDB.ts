@@ -3,6 +3,7 @@ import * as apid from '../../../api';
 import Rule from '../../db/entities/Rule';
 import StrUtil from '../../util/StrUtil';
 import IPromiseRetry from '../IPromiseRetry';
+import AuthContext from '../service/auth/AuthContext';
 import DBUtil from './DBUtil';
 import IDBOperator from './IDBOperator';
 import IRuleDB, { RuleWithCnt } from './IRuleDB';
@@ -35,9 +36,11 @@ export default class RuleDB implements IRuleDB {
             // 削除
             await queryRunner.manager.delete(Rule, {});
 
-            // 挿入処理
+            // 挿入処理 (restore は元の createdUser を維持する)
             for (const item of items) {
-                await queryRunner.manager.insert(Rule, this.convertRuleToDBRule(item));
+                const dbRule = this.convertRuleToDBRule(item);
+                dbRule.createdUser = (item as any).createdUser ?? null;
+                await queryRunner.manager.insert(Rule, dbRule);
             }
             await queryRunner.commitTransaction();
         } catch (err: any) {
@@ -60,7 +63,10 @@ export default class RuleDB implements IRuleDB {
      */
     public async insertOnce(rule: apid.Rule | apid.AddRuleOption): Promise<apid.RuleId> {
         const connection = await this.op.getConnection();
-        const queryBuilder = connection.createQueryBuilder().insert().into(Rule).values(this.convertRuleToDBRule(rule));
+        const dbRule = this.convertRuleToDBRule(rule);
+        // 作成ユーザーは現在の AuthContext から取得 (trusted/未認証は null)
+        dbRule.createdUser = AuthContext.getCurrentUser();
+        const queryBuilder = connection.createQueryBuilder().insert().into(Rule).values(dbRule);
 
         const insertedResult = await this.promieRetry.run(() => {
             return queryBuilder.execute();
@@ -317,6 +323,9 @@ export default class RuleDB implements IRuleDB {
             id: rule.id,
             updateCnt: rule.updateCnt,
             isTimeSpecification: rule.isTimeSpecification,
+            ...(typeof rule.createdUser === 'string' && rule.createdUser.length > 0
+                ? { createdUser: rule.createdUser }
+                : {}),
             searchOption: {
                 keyCS: rule.keyCS,
                 keyRegExp: rule.keyRegExp,

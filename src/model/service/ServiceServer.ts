@@ -19,6 +19,7 @@ import IConfigFile from '../IConfigFile';
 import IConfiguration from '../IConfiguration';
 import ILogger from '../ILogger';
 import ILoggerModel from '../ILoggerModel';
+import AuthContext from './auth/AuthContext';
 import AuthService from './auth/AuthService';
 import { createAuthMiddleware } from './auth/authMiddleware';
 import IServiceServer from './IServiceServer';
@@ -141,6 +142,12 @@ class ServiceServer implements IServiceServer {
 
         // 全パス共通の認証ミドルウェア (PROTECTED_PREFIXES のみ実際に検査)
         this.app.use(createAuthMiddleware(auth, { subDirectory: this.config.subDirectory ?? '' }));
+
+        // 認証ユーザを AsyncLocalStorage に格納し、後続ハンドラから参照可能にする
+        this.app.use((req, _res, next) => {
+            const user = (req as any).authUser ?? null;
+            AuthContext.run(typeof user === 'string' ? user : null, next);
+        });
     }
 
     /**

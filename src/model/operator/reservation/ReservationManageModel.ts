@@ -17,6 +17,7 @@ import IConfiguration from '../../IConfiguration';
 import IExecutionManagementModel from '../../IExecutionManagementModel';
 import ILogger from '../../ILogger';
 import ILoggerModel from '../../ILoggerModel';
+import AuthContext from '../../service/auth/AuthContext';
 import IReserveOptionChecker from '../IReserveOptionChecker';
 import IReservationManageModel from './IReservationManageModel';
 import Tuner from './Tuner';
@@ -352,6 +353,8 @@ class ReservationManageModel implements IReservationManageModel {
         if (typeof option.encodeOption !== 'undefined') {
             this.setEncodeOptionToReserve(newReserve, option.encodeOption);
         }
+        // 作成ユーザーは現在の AuthContext から取得 (trusted/未認証は null)
+        newReserve.createdUser = AuthContext.getCurrentUser();
     }
 
     /**
@@ -401,6 +404,7 @@ class ReservationManageModel implements IReservationManageModel {
         newReserve.encodeDirectory2 = parentReserve.encodeDirectory2;
         newReserve.encodeDirectory3 = parentReserve.encodeDirectory3;
         newReserve.isDeleteOriginalAfterEncode = parentReserve.isDeleteOriginalAfterEncode;
+        newReserve.createdUser = parentReserve.createdUser;
 
         return newReserve;
     }
@@ -920,6 +924,8 @@ class ReservationManageModel implements IReservationManageModel {
         reserve.ruleUpdateCnt = rule.updateCnt;
         reserve.updateTime = updateTime;
         reserve.allowEndLack = rule.reserveOption.allowEndLack;
+        // ルール由来の予約はルールの作成者を継承
+        reserve.createdUser = (rule as any).createdUser ?? null;
 
         if (typeof rule.reserveOption.tags !== 'undefined') {
             reserve.tags = JSON.stringify(rule.reserveOption.tags);
