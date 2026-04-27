@@ -10,6 +10,7 @@
                         <td class="text-left">放送局</td>
                         <td class="text-left">ジャンル</td>
                         <td class="text-left reserve-cnt">予約数</td>
+                        <td class="text-left created-user">作成者</td>
                         <td class="text-left menu"></td>
                     </tr>
                 </thead>
@@ -23,6 +24,7 @@
                         <td>{{ item.display.channels }}</td>
                         <td>{{ item.display.genres }}</td>
                         <td class="reserve-cnt reserve-cnt-body">{{ item.display.reservationsCnt }}</td>
+                        <td class="created-user">{{ item.display.createdUser || '' }}</td>
                         <td class="menu">
                             <RuleItemMenu v-if="isEditMode === false" :ruleItem="item"></RuleItemMenu>
                         </td>
@@ -79,6 +81,8 @@ export default class RuleTableItem extends Vue {
     width: 80px
 .reserve-cnt-body
     text-align: center
+.created-user
+    width: 100px
 
 tbody
     tr

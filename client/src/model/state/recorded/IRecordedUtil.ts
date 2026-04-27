@@ -21,6 +21,7 @@ export interface RecordedDisplayData {
         ruleName?: string;
         isExternal: boolean;
         externalPath?: string;
+        createdUser?: string; // 録画作成ユーザー (trusted/未認証は未定義 = 表示しない)
     };
     recordedItem: apid.RecordedItem;
     isSelected: boolean;

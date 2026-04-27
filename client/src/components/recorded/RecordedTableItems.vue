@@ -25,6 +25,10 @@
                             <v-icon class="rule-icon">mdi-calendar</v-icon>
                             {{ item.display.ruleName }}
                         </span>
+                        <span v-if="!!item.display.createdUser" class="ml-2 created-user-link" v-on:click.stop="filterCreatedUser(item)">
+                            <v-icon class="user-icon">mdi-account</v-icon>
+                            {{ item.display.createdUser }}
+                        </span>
                     </div>
                     <div class="name subtitle-1 font-weight-medium mt-1">
                         {{ item.display.name }}
@@ -83,6 +87,14 @@ export default class RecordedTableItems extends Vue {
         }
         this.$router.push({ path: '/recorded', query: { ruleId: ruleId.toString(10) } });
     }
+
+    public filterCreatedUser(item: RecordedDisplayData): void {
+        const user = item.display.createdUser;
+        if (typeof user !== 'string' || user.length === 0) {
+            return;
+        }
+        this.$router.push({ path: '/recorded', query: { createdUser: user } });
+    }
 }
 </script>
 
@@ -102,6 +114,12 @@ export default class RecordedTableItems extends Vue {
     .rule-link
         text-decoration: underline
     .rule-icon
+        font-size: 16px !important
+        padding-bottom: 2px
+
+    .created-user-link
+        text-decoration: underline
+    .user-icon
         font-size: 16px !important
         padding-bottom: 2px
 

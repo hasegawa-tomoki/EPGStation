@@ -10,6 +10,7 @@
                             {{ item.keyword }}
                             -->
                             <v-list-item-title class="subtitle-1">{{ item.display.keyword }}</v-list-item-title>
+                            <div v-if="!!item.display.createdUser" class="caption grey--text text--darken-1">作成: {{ item.display.createdUser }}</div>
                         </div>
                         <div class="menu d-flex align-center">
                             <span class="mx-2 grey--text text--lighten-1">{{ item.display.reservationsCnt }}</span>

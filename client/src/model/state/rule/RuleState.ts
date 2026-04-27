@@ -98,6 +98,7 @@ export default class RuleState implements IRuleState {
                 channels: channelStr,
                 genres: genreStr,
                 reservationsCnt: typeof r.reservesCnt === 'undefined' ? 0 : r.reservesCnt,
+                createdUser: typeof r.createdUser === 'string' && r.createdUser.length > 0 ? r.createdUser : undefined,
             },
             item: r,
             isSelected: typeof isSelectedIndex[r.id] === 'undefined' ? false : isSelectedIndex[r.id],

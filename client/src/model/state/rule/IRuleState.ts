@@ -12,6 +12,7 @@ export interface RuleStateDisplayData {
     channels: string;
     genres: string;
     reservationsCnt: number;
+    createdUser?: string; // ルール作成者 (trusted/未認証は未定義 = 表示しない)
 }
 
 export interface RuleStateData {

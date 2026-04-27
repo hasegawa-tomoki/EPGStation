@@ -27,6 +27,7 @@
                     ></v-autocomplete>
                     <v-select v-model="searchState.channelId" :items="searchState.channelItems" label="放送局" clearable :menu-props="{ auto: true }"></v-select>
                     <v-select v-model="searchState.genre" :items="searchState.genreItems" label="ジャンル" clearable :menu-props="{ auto: true }"></v-select>
+                    <v-text-field v-model="searchState.createdUser" label="作成ユーザー" clearable v-on:keydown.enter="onSearch()"></v-text-field>
                     <div class="check-boxes">
                         <v-checkbox v-model="searchState.hasOriginalFile" label="元ファイルを含む" class="mt-2"></v-checkbox>
                         <v-checkbox v-model="isNoRule" label="手動録画のみ" class="mt-2"></v-checkbox>
@@ -114,6 +115,9 @@ export default class RecordedSearchMenu extends Vue {
                     searchQuery.isExternal = true;
                 }
             }
+            if (typeof this.searchState.createdUser === 'string' && this.searchState.createdUser.length > 0) {
+                searchQuery.createdUser = this.searchState.createdUser;
+            }
 
             await Util.move(this.$router, {
                 path: '/recorded',
@@ -182,6 +186,9 @@ export default class RecordedSearchMenu extends Vue {
             } else {
                 this.searchState.isInternal = qInternal === 'true' || (qInternal as any) === true;
                 this.searchState.isExternal = qExternal === 'true' || (qExternal as any) === true;
+            }
+            if (typeof this.$route.query.createdUser === 'string' && this.$route.query.createdUser.length > 0) {
+                this.searchState.createdUser = this.$route.query.createdUser;
             }
 
             // キーワードにフォーカスを当てる

@@ -282,6 +282,9 @@ export default class Recorded extends Vue {
         if (typeof this.$route.query.isExternal !== 'undefined') {
             option.isExternal = (this.$route.query.isExternal as any) === true || this.$route.query.isExternal === 'true';
         }
+        if (typeof this.$route.query.createdUser === 'string' && this.$route.query.createdUser.length > 0) {
+            option.createdUser = this.$route.query.createdUser;
+        }
 
         return option;
     }

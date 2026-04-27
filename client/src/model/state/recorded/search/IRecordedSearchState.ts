@@ -13,6 +13,7 @@ export default interface IRecordedSearchState {
     ruleId: apid.RuleId | null | undefined;
     channelId: apid.ChannelId | undefined;
     genre: apid.ProgramGenreLv1 | undefined;
+    createdUser: string | undefined;
     ruleKeyword: string | null;
     ruleItems: apid.RuleKeywordItem[];
     channelItems: SelectorItem[];

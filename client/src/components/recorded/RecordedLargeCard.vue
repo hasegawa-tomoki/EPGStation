@@ -18,6 +18,7 @@
             <div class="text caption font-weight-light">{{ item.display.channelName }}</div>
             <div class="text caption font-weight-light">{{ item.display.time }} ({{ item.display.duration }} m)</div>
             <div v-if="typeof item.display.ruleId !== 'undefined'" class="text caption font-weight-light rule" v-on:click.stop="openRule">ルール: {{ item.display.ruleName }}</div>
+            <div v-if="!!item.display.createdUser" class="text caption font-weight-light">作成: {{ item.display.createdUser }}</div>
             <div
                 v-if="isShowDropInfo === true && typeof item.display.drop !== 'undefined'"
                 class="text caption font-weight-light"

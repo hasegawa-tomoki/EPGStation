@@ -16,6 +16,7 @@ class RecordedSearchState implements IRecordedSearchState {
     public ruleId: apid.RuleId | null | undefined = null;
     public channelId: apid.ChannelId | undefined;
     public genre: apid.ProgramGenreLv1 | undefined;
+    public createdUser: string | undefined;
     public ruleKeyword: string | null = null;
     public ruleItems: apid.RuleKeywordItem[] = [];
     public channelItems: SelectorItem[] = [];
@@ -110,6 +111,7 @@ class RecordedSearchState implements IRecordedSearchState {
         this.ruleId = null;
         this.channelId = undefined;
         this.genre = undefined;
+        this.createdUser = undefined;
         this.ruleKeyword = null;
     }
 
