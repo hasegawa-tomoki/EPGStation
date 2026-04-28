@@ -7,6 +7,24 @@
                     <v-card class="mx-auto" max-width="800">
                         <v-list-item three-line>
                             <v-list-item-content>
+                                <div class="title">アカウント</div>
+                                <div class="my-2 d-flex flex-row align-center">
+                                    <div>
+                                        <v-list-item-title class="subtitle-1">ログインユーザー</v-list-item-title>
+                                        <v-list-item-subtitle v-if="authUser !== null && authUser !== 'trusted'">{{ authUser }}</v-list-item-subtitle>
+                                        <v-list-item-subtitle v-else-if="authUser === 'trusted'">認証なし (ローカル/Tailscale 経由)</v-list-item-subtitle>
+                                        <v-list-item-subtitle v-else>未ログイン</v-list-item-subtitle>
+                                    </div>
+                                    <v-spacer></v-spacer>
+                                    <v-btn v-if="authUser !== null && authUser !== 'trusted'" outlined color="error" v-on:click="logout" :loading="logoutBusy">ログアウト</v-btn>
+                                </div>
+                            </v-list-item-content>
+                        </v-list-item>
+
+                        <v-divider></v-divider>
+
+                        <v-list-item three-line>
+                            <v-list-item-content>
                                 <div class="title">全般</div>
                                 <div class="my-2 d-flex flex-row align-center">
                                     <div>
@@ -328,6 +346,7 @@ import IScrollPositionState from '@/model/state/IScrollPositionState';
 import INavigationState from '@/model/state/navigation/INavigationState';
 import ISnackbarState from '@/model/state/snackbar/ISnackbarState';
 import { ISettingStorageModel, GuideViewMode } from '@/model/storage/setting/ISettingStorageModel';
+import axios from 'axios';
 import { Component, Vue, Watch } from 'vue-property-decorator';
 import IColorThemeState from '@/model/state/IColorThemeState';
 import Mpegts from 'mpegts.js';
@@ -351,6 +370,8 @@ interface SelectItem {
 })
 export default class Settings extends Vue {
     public isShow: boolean = false;
+    public authUser: string | null = null;
+    public logoutBusy: boolean = false;
     public storageModel: ISettingStorageModel = container.get<ISettingStorageModel>('ISettingStorageModel');
 
     private navigationState: INavigationState = container.get<INavigationState>('INavigationState');
@@ -471,12 +492,42 @@ export default class Settings extends Vue {
     public onUrlChange(): void {
         this.$nextTick(() => {
             this.isShow = true;
+            this.fetchAuthUser();
 
             this.$nextTick(async () => {
                 // スクロール位置復元を許可
                 await this.scrollState.emitDoneGetData();
             });
         });
+    }
+
+    /**
+     * 現在のログインユーザを取得 (trustedNetworks 経由なら "trusted")
+     */
+    private async fetchAuthUser(): Promise<void> {
+        try {
+            const res = await axios.get('./api/auth/me');
+            this.authUser = typeof res.data?.user === 'string' ? res.data.user : null;
+        } catch (_e) {
+            this.authUser = null;
+        }
+    }
+
+    /**
+     * ログアウト → cookie 破棄 → /login へ
+     */
+    public async logout(): Promise<void> {
+        if (this.logoutBusy === true) {
+            return;
+        }
+        this.logoutBusy = true;
+        try {
+            await axios.post('./api/logout');
+        } catch (_e) {
+            // cookie 失効は気にせず login 画面へ進める
+        }
+        // 内部 state を完全クリアするためフルリロードで /login へ
+        window.location.href = './login';
     }
 }
 </script>
