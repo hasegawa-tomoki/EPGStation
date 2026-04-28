@@ -39,6 +39,7 @@ export default class ReserveStateUtil implements IReserveStateUtil {
                     genres: this.createGenres(r),
                     description: r.description,
                     extended: r.extended,
+                    createdUser: typeof r.createdUser === 'string' && r.createdUser.length > 0 ? r.createdUser : undefined,
                 },
                 reserveItem: r,
                 isSelected: typeof isSelectedIndex[r.id] === 'undefined' ? false : isSelectedIndex[r.id],

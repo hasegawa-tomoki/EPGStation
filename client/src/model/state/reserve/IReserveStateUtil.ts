@@ -18,6 +18,7 @@ export interface ReserveStateData {
         genres: string[];
         description?: string;
         extended?: string;
+        createdUser?: string; // 予約作成ユーザー (trusted/未認証は未定義 = 表示しない)
     };
     reserveItem: apid.ReserveItem;
     isSelected: boolean;

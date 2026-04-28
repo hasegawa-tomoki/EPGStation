@@ -20,6 +20,10 @@
                                 <v-icon class="reserve-icon">mdi-calendar</v-icon>
                                 {{ reserve.display.ruleName }}
                             </span>
+                            <span v-if="!!reserve.display.createdUser" class="ml-2">
+                                <v-icon class="reserve-icon">mdi-account</v-icon>
+                                {{ reserve.display.createdUser }}
+                            </span>
                         </div>
                         <div class="body-2 font-weight-light">{{ reserve.display.description }}</div>
                     </v-list-item-content>
