@@ -37,7 +37,7 @@ export default class ManualReserveState implements IManualReserveState {
         mode3: null,
         encodeParentDirectoryName3: null,
         directory3: null,
-        isDeleteOriginalAfterEncode: false,
+        isDeleteOriginalAfterEncode: true,
     };
 
     // ルールオプションのアコーディオンの開閉を行う
@@ -87,8 +87,9 @@ export default class ManualReserveState implements IManualReserveState {
             recordedFormat: null,
         };
 
+        const defaultEncodeMode = this.getEncodeModeItems()[0] ?? null;
         this.encodeOption = {
-            mode1: null,
+            mode1: defaultEncodeMode,
             encodeParentDirectoryName1: null,
             directory1: null,
             mode2: null,
@@ -97,7 +98,7 @@ export default class ManualReserveState implements IManualReserveState {
             mode3: null,
             encodeParentDirectoryName3: null,
             directory3: null,
-            isDeleteOriginalAfterEncode: false,
+            isDeleteOriginalAfterEncode: true,
         };
 
         this.optionPanel = [0, 1, 2, 3, 6];
