@@ -90,6 +90,15 @@ export default class RuleDB implements IRuleDB {
         const convertedRule = this.convertRuleToDBRule(newRule);
         convertedRule.updateCnt = oldRule.updateCnt + 1;
 
+        // 作成ユーザーが未記入なら編集者で補完 (既存値は保持)
+        const existingUser = (oldRule as any).createdUser;
+        if (typeof existingUser !== 'string' || existingUser.length === 0) {
+            const editor = AuthContext.getCurrentUser();
+            if (editor !== null) {
+                convertedRule.createdUser = editor;
+            }
+        }
+
         const connection = await this.op.getConnection();
         const queryBuilder = connection
             .createQueryBuilder()
