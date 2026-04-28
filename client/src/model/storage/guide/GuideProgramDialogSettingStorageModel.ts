@@ -1,7 +1,7 @@
 import { inject, injectable } from 'inversify';
 import AbstractStorageBaseModel from '../AbstractStorageBaseModel';
 import IStorageOperationModel from '../IStorageOperationModel';
-import { IGuideProgramDialogSettingStorageModel, IGuideProgramDialogSettingValue, NONE_ENCODE_OPTION } from './IGuideProgramDialogSettingStorageModel';
+import { IGuideProgramDialogSettingStorageModel, IGuideProgramDialogSettingValue } from './IGuideProgramDialogSettingStorageModel';
 
 @injectable()
 export default class GuideProgramDialogSettingStorageModel extends AbstractStorageBaseModel<IGuideProgramDialogSettingValue> implements IGuideProgramDialogSettingStorageModel {
@@ -11,12 +11,13 @@ export default class GuideProgramDialogSettingStorageModel extends AbstractStora
 
     public getDefaultValue(): IGuideProgramDialogSettingValue {
         return {
-            encode: NONE_ENCODE_OPTION,
-            isDeleteOriginalAfterEncode: false,
+            encode: 'H.264',
+            isDeleteOriginalAfterEncode: true,
         };
     }
 
     public getStorageKey(): string {
-        return 'GuideProgramDetailSetting';
+        // V2: 旧デフォルト (TS / false) を残している既存ブラウザにも新デフォルトを反映させるため key を変更
+        return 'GuideProgramDetailSettingV2';
     }
 }
