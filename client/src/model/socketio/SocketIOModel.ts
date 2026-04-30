@@ -22,7 +22,10 @@ class SocketIOModel implements ISocketIOModel {
             throw new Error('InitializationSocketIOError');
         }
 
-        this.io = socketIo.io(`${location.protocol}//${location.hostname}:${config.socketIOPort}`, {
+        // SocketIO は同一オリジン (vhost / 直接ポートどちらでも) に接続する。
+        // 以前は config.socketIOPort で直ポートに繋いでいたが、リバプロ越しでは
+        // 外部公開していないポートに繋がらず接続失敗していた。
+        this.io = socketIo.io(location.origin, {
             path: `${Util.getSubDirectory()}/socket.io`,
         });
     }
