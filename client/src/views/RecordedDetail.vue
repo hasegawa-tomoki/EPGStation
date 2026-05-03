@@ -83,6 +83,10 @@
                         <div v-if="isHideExtend === false" ref="extend" class="mt-2 body-2 extended">
                             {{ recorded.display.extended }}
                         </div>
+                        <div v-if="transcript !== null" class="mt-6 transcript-area">
+                            <div class="subtitle-2 transcript-title">文字起こし</div>
+                            <div class="body-2 transcript-body">{{ transcript }}</div>
+                        </div>
                     </div>
                     <RecordedDetailSelectStreamDialog></RecordedDetailSelectStreamDialog>
                     <DropLogDialog :isOpen.sync="isOpenDropLogDialog"></DropLogDialog>
@@ -101,6 +105,7 @@ import RecordedDetailPlayButton from '@/components/recorded/detail/RecordedDetai
 import RecordedDetailSelectStreamDialog from '@/components/recorded/detail/RecordedDetailSelectStreamDialog.vue';
 import RecordedDetailStopEncodeButton from '@/components/recorded/detail/RecordedDetailStopEncodeButton.vue';
 import TitleBar from '@/components/titleBar/TitleBar.vue';
+import IRecordedApiModel from '@/model/api/recorded/IRecordedApiModel';
 import container from '@/model/ModelContainer';
 import ISocketIOModel from '@/model/socketio/ISocketIOModel';
 import IDropLogDialogState from '@/model/state/dropLog/IDropLogDialogState';
@@ -131,6 +136,7 @@ Component.registerHooks(['beforeRouteUpdate', 'beforeRouteLeave']);
 export default class RecordedDetail extends Vue {
     public isHideExtend = false;
     public isOpenDropLogDialog = false;
+    public transcript: string | null = null;
 
     public recordedDetailState: IRecordedDetailState = container.get<IRecordedDetailState>('IRecordedDetailState');
     private dropLogState: IDropLogDialogState = container.get<IDropLogDialogState>('IDropLogDialogState');
@@ -139,6 +145,7 @@ export default class RecordedDetail extends Vue {
     private scrollState: IScrollPositionState = container.get<IScrollPositionState>('IScrollPositionState');
     private snackbarState: ISnackbarState = container.get<ISnackbarState>('ISnackbarState');
     private socketIoModel: ISocketIOModel = container.get<ISocketIOModel>('ISocketIOModel');
+    private recordedApiModel: IRecordedApiModel = container.get<IRecordedApiModel>('IRecordedApiModel');
     private onUpdateStatusCallback = (async (): Promise<void> => {
         await this.fetchData();
     }).bind(this);
@@ -228,6 +235,7 @@ export default class RecordedDetail extends Vue {
     @Watch('$route', { immediate: true, deep: true })
     public onUrlChange(): void {
         this.recordedDetailState.clearData();
+        this.transcript = null;
         this.$nextTick(async () => {
             await this.fetchData().catch(err => {
                 this.snackbarState.open({
@@ -246,7 +254,18 @@ export default class RecordedDetail extends Vue {
      * データ取得
      */
     private async fetchData(): Promise<void> {
-        await this.recordedDetailState.fetchData(parseInt(this.$route.params.id, 10), this.settingValue === null ? true : this.settingValue.isHalfWidthDisplayed);
+        const recordedId = parseInt(this.$route.params.id, 10);
+        await this.recordedDetailState.fetchData(recordedId, this.settingValue === null ? true : this.settingValue.isHalfWidthDisplayed);
+
+        // 文字起こしテキスト (生成済みであれば取得、無ければ null)
+        this.recordedApiModel
+            .getTranscript(recordedId)
+            .then(text => {
+                this.transcript = text;
+            })
+            .catch(() => {
+                this.transcript = null;
+            });
 
         // 番組詳細 URL 処理
         this.$nextTick(() => {
@@ -312,6 +331,26 @@ $switch-display-width: 800px
 
 .description, .extended
     white-space: pre-wrap
+
+.transcript-area
+    border-top: 1px solid rgba(0, 0, 0, 0.12)
+    padding-top: 12px
+
+    .transcript-title
+        font-weight: 600
+        margin-bottom: 6px
+        opacity: 0.7
+
+    .transcript-body
+        white-space: pre-wrap
+        font-family: monospace
+        font-size: 12px
+        line-height: 1.6
+        max-height: 360px
+        overflow-y: auto
+        background-color: rgba(0, 0, 0, 0.03)
+        border-radius: 4px
+        padding: 8px 10px
 
 @media screen and (min-width: $switch-display-width)
     .content-0

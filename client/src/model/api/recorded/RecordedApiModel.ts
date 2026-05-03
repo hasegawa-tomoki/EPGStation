@@ -122,4 +122,22 @@ export default class RecordedApiModel implements IRecordedApiModel {
     public async requestTranscribe(recordedId: apid.RecordedId): Promise<void> {
         await this.repository.post(`/recorded/${recordedId}/transcribe`);
     }
+
+    /**
+     * 録画の文字起こしテキストを取得 (生成済みでなければ null)
+     * @param recordedId: apid.RecordedId
+     */
+    public async getTranscript(recordedId: apid.RecordedId): Promise<string | null> {
+        try {
+            const result = await this.repository.get(`/recorded/${recordedId}/transcript`, {
+                responseType: 'text',
+            });
+            return typeof result.data === 'string' ? result.data : String(result.data);
+        } catch (err: any) {
+            if (err?.response?.status === 404) {
+                return null;
+            }
+            throw err;
+        }
+    }
 }

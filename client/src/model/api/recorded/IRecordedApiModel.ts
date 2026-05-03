@@ -12,4 +12,5 @@ export default interface IRecordedApiModel {
     cleanup(): Promise<void>;
     moveToExternalStorage(recordedId: apid.RecordedId, option: apid.MoveToExternalStorageOption): Promise<void>;
     requestTranscribe(recordedId: apid.RecordedId): Promise<void>;
+    getTranscript(recordedId: apid.RecordedId): Promise<string | null>;
 }
