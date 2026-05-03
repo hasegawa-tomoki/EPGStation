@@ -355,6 +355,7 @@ class ReservationManageModel implements IReservationManageModel {
         }
         // 作成ユーザーは現在の AuthContext から取得 (trusted/未認証は null)
         newReserve.createdUser = AuthContext.getCurrentUser();
+        newReserve.transcribe = option.transcribe === true;
     }
 
     /**
@@ -405,6 +406,7 @@ class ReservationManageModel implements IReservationManageModel {
         newReserve.encodeDirectory3 = parentReserve.encodeDirectory3;
         newReserve.isDeleteOriginalAfterEncode = parentReserve.isDeleteOriginalAfterEncode;
         newReserve.createdUser = parentReserve.createdUser;
+        newReserve.transcribe = parentReserve.transcribe;
 
         return newReserve;
     }
@@ -926,6 +928,8 @@ class ReservationManageModel implements IReservationManageModel {
         reserve.allowEndLack = rule.reserveOption.allowEndLack;
         // ルール由来の予約はルールの作成者を継承
         reserve.createdUser = (rule as any).createdUser ?? null;
+        // ルール由来の予約は transcribe フラグも継承
+        reserve.transcribe = rule.transcribe === true;
 
         if (typeof rule.reserveOption.tags !== 'undefined') {
             reserve.tags = JSON.stringify(rule.reserveOption.tags);
@@ -1467,6 +1471,7 @@ class ReservationManageModel implements IReservationManageModel {
         }
         this.setSaveOptionToReserve(newReserve, option.saveOption);
         this.setEncodeOptionToReserve(newReserve, option.encodeOption);
+        newReserve.transcribe = option.transcribe === true;
 
         // 更新
         await this.reserveDB.updateOnce(newReserve).catch(err => {

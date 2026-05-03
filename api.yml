@@ -558,6 +558,9 @@ components:
                     $ref: '#/components/schemas/ReserveSaveOption'
                 encodeOption:
                     $ref: '#/components/schemas/ReserveEncodedOption'
+                transcribe:
+                    description: 音声から概要を生成する
+                    type: boolean
 
         RuleSearchOption:
             description: ルール検索オプション
@@ -786,6 +789,9 @@ components:
                     $ref: '#/components/schemas/ReserveSaveOption'
                 encodeOption:
                     $ref: '#/components/schemas/ReserveEncodedOption'
+                transcribe:
+                    description: 音声から概要を生成する
+                    type: boolean
 
         ManualReserveOption:
             description: 手動予約オプション
@@ -928,6 +934,9 @@ components:
                 createdUser:
                     description: 予約を作成したログインユーザー名 (rule 由来は rule.createdUser を継承、trusted は未定義)
                     type: string
+                transcribe:
+                    description: 音声から概要を生成する (rule 由来は rule.transcribe を継承)
+                    type: boolean
 
         Reserves:
             description: 予約情報
@@ -1104,6 +1113,9 @@ components:
                 createdUser:
                     description: 録画を作成したログインユーザー名 (reserve.createdUser を継承、trusted は未定義)
                     type: string
+                transcribe:
+                    description: 音声から概要を生成する (reserve.transcribe を継承)
+                    type: boolean
 
         CreateNewRecordedOption:
             description: 新規追加する録画番組情報

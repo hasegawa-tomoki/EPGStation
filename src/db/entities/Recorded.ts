@@ -219,4 +219,9 @@ export default class Recorded extends BaseEntity {
         nullable: true,
     })
     public createdUser?: string | null; // 録画作成ログインユーザー名 (reserve.createdUser を継承、trusted は null)
+
+    @Column({
+        default: false,
+    })
+    public transcribe: boolean = false; // 音声から概要を生成する (reserve.transcribe を継承)
 }

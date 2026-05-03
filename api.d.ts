@@ -49,6 +49,7 @@ export interface EditManualReserveOption {
     tags?: RecordedTagId[];
     saveOption?: ReserveSaveOption;
     encodeOption?: ReserveEncodedOption;
+    transcribe?: boolean; // 音声から概要を生成する
 }
 
 /**
@@ -147,6 +148,7 @@ export interface ReserveItem {
     audioSamplingRate?: ProgramAudioSamplingRate;
     audioComponentType?: number;
     createdUser?: string; // 予約を作成したログインユーザー名
+    transcribe?: boolean; // 音声から概要を生成する (rule 由来は rule.transcribe を継承)
 }
 
 /**
@@ -225,6 +227,7 @@ export interface AddRuleOption {
     reserveOption: RuleReserveOption;
     saveOption?: ReserveSaveOption;
     encodeOption?: ReserveEncodedOption;
+    transcribe?: boolean; // 音声から概要を生成する
 }
 
 /**
@@ -386,6 +389,7 @@ export interface RecordedItem {
     isEncoding: boolean;
     isProtected: boolean;
     createdUser?: string; // 録画作成したログインユーザー名
+    transcribe?: boolean; // 音声から概要を生成する (reserve.transcribe を継承)
 }
 
 /**

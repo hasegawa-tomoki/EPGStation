@@ -279,6 +279,7 @@ export default class RuleDB implements IRuleDB {
             parentDirectoryName3: null,
             directory3: null,
             isDeleteOriginalAfterEncode: false,
+            transcribe: !!(rule as apid.AddRuleOption).transcribe,
         };
 
         if (typeof (<apid.Rule>rule).id !== 'undefined') {
@@ -449,6 +450,10 @@ export default class RuleDB implements IRuleDB {
         if (Object.keys(encodeOption).length > 0) {
             encodeOption.isDeleteOriginalAfterEncode = rule.isDeleteOriginalAfterEncode;
             convertedRule.encodeOption = encodeOption;
+        }
+
+        if (rule.transcribe === true) {
+            convertedRule.transcribe = true;
         }
 
         return convertedRule;

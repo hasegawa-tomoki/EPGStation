@@ -540,6 +540,8 @@ class RecorderModel implements IRecorderModel {
         recorded.duration = this.reserve.endAt - this.reserve.startAt;
         // 予約の作成者を録画にも継承
         recorded.createdUser = this.reserve.createdUser ?? null;
+        // 予約の transcribe フラグを録画にも継承
+        recorded.transcribe = this.reserve.transcribe === true;
 
         if (this.reserve.isTimeSpecified === true) {
             // 時刻指定予約なので channelId と startAt を元に番組情報を取得する

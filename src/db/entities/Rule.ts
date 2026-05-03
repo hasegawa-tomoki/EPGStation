@@ -280,4 +280,9 @@ export default class Rule extends BaseEntity {
         nullable: true,
     })
     public createdUser: string | null = null; // 作成したログインユーザー名 (trusted/未認証は null)
+
+    @Column({
+        default: false,
+    })
+    public transcribe: boolean = false; // 音声から概要を生成する (録画完了後に文字起こし)
 }

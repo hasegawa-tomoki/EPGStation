@@ -322,4 +322,9 @@ export default class Reserve extends BaseEntity {
         nullable: true,
     })
     public createdUser: string | null = null; // 予約を作成したログインユーザー名 (rule 由来は rule.createdUser を継承、trusted は null)
+
+    @Column({
+        default: false,
+    })
+    public transcribe: boolean = false; // 音声から概要を生成する (rule 由来は rule.transcribe を継承)
 }

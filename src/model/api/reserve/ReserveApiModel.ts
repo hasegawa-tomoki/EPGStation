@@ -236,6 +236,9 @@ export default class ReserveApiModel implements IReserveApiModel {
         if (typeof reserve.createdUser === 'string' && reserve.createdUser.length > 0) {
             item.createdUser = reserve.createdUser;
         }
+        if (reserve.transcribe === true) {
+            item.transcribe = true;
+        }
 
         return item;
     }
