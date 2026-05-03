@@ -1,4 +1,5 @@
 import diskusage from 'diskusage-ng';
+import * as http from 'http';
 import { inject, injectable } from 'inversify';
 import { mkdirp } from 'mkdirp';
 import * as path from 'path';
@@ -10,6 +11,7 @@ import VideoFile from '../../../db/entities/VideoFile';
 import FileUtil from '../../../util/FileUtil';
 import StrUtil from '../../../util/StrUtil';
 import IVideoUtil from '../../api/video/IVideoUtil';
+import IChannelDB from '../../db/IChannelDB';
 import IDropLogFileDB from '../../db/IDropLogFileDB';
 import IRecordedDB from '../../db/IRecordedDB';
 import IRecordedHistoryDB from '../../db/IRecordedHistoryDB';
@@ -42,6 +44,7 @@ export default class RecordedManageModel implements IRecordedManageModel {
     private recordedEvent: IRecordedEvent;
     private videoUtil: IVideoUtil;
     private recordingUtilModel: IRecordingUtilModel;
+    private channelDB: IChannelDB;
 
     constructor(
         @inject('ILoggerModel') logger: ILoggerModel,
@@ -56,6 +59,7 @@ export default class RecordedManageModel implements IRecordedManageModel {
         @inject('IRecordedEvent') recordedEvent: IRecordedEvent,
         @inject('IVideoUtil') videoUtil: IVideoUtil,
         @inject('IRecordingUtilModel') recordingUtilModel: IRecordingUtilModel,
+        @inject('IChannelDB') channelDB: IChannelDB,
     ) {
         this.log = logger.getLogger();
         this.config = configuration.getConfig();
@@ -68,6 +72,7 @@ export default class RecordedManageModel implements IRecordedManageModel {
         this.recordedEvent = recordedEvent;
         this.videoUtil = videoUtil;
         this.recordingUtilModel = recordingUtilModel;
+        this.channelDB = channelDB;
     }
 
     /**
@@ -515,6 +520,94 @@ export default class RecordedManageModel implements IRecordedManageModel {
 
         await this.recordedDB.changeProtect(recordedId, isProtect);
         this.recordedEvent.emitChangeProtect(recordedId, isProtect);
+    }
+
+    /**
+     * transcribe フラグを true にした上で transcribe サービスへ enqueue する
+     * (録画済みメニューの「文字起こし」ボタン用)
+     * @param recordedId: apid.RecordedId
+     * @return Promise<void>
+     */
+    public async requestTranscribe(recordedId: apid.RecordedId): Promise<void> {
+        this.log.system.info(`request transcribe: ${recordedId}`);
+
+        const recorded = await this.recordedDB.findId(recordedId);
+        if (recorded === null) {
+            throw new Error('RecordedIsNull');
+        }
+        if (typeof recorded.videoFiles === 'undefined' || recorded.videoFiles.length === 0) {
+            throw new Error('VideoFileNotFound');
+        }
+        const recPath = await this.videoUtil.getFullFilePathFromId(recorded.videoFiles[0].id);
+        if (recPath === null) {
+            throw new Error('VideoFilePathNotFound');
+        }
+
+        // DB の transcribe フラグを true にする (べき等)
+        await this.recordedDB.setTranscribe(recordedId, true);
+
+        // チャンネル名取得 (失敗しても enqueue は続ける)
+        let channelName = '';
+        try {
+            const channel = await this.channelDB.findId(recorded.channelId);
+            channelName = channel === null ? '' : channel.name;
+        } catch (err: any) {
+            this.log.system.warn(`channel lookup failed for recorded ${recordedId}: ${err.message}`);
+        }
+
+        const baseUrl = process.env['TRANSCRIBE_SERVICE_URL'] || 'http://transcribe:9999';
+        const payload = JSON.stringify({
+            recordedId: recorded.id,
+            recPath: recPath,
+            name: recorded.name,
+            channelName: channelName,
+        });
+        await this.postTranscribeEnqueue(baseUrl, payload);
+    }
+
+    /**
+     * transcribe サービスの POST /transcribe を叩く
+     */
+    private postTranscribeEnqueue(baseUrl: string, payload: string): Promise<void> {
+        return new Promise<void>((resolve, reject) => {
+            let url: URL;
+            try {
+                url = new URL(baseUrl + '/transcribe');
+            } catch (err: any) {
+                reject(new Error(`invalid TRANSCRIBE_SERVICE_URL: ${baseUrl}`));
+                return;
+            }
+
+            const req = http.request(
+                {
+                    hostname: url.hostname,
+                    port: url.port || 80,
+                    path: url.pathname,
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Content-Length': Buffer.byteLength(payload),
+                    },
+                    timeout: 10000,
+                },
+                res => {
+                    res.resume();
+                    res.on('end', () => {
+                        if (typeof res.statusCode === 'number' && res.statusCode >= 400) {
+                            reject(new Error(`transcribe service responded HTTP ${res.statusCode}`));
+                        } else {
+                            resolve();
+                        }
+                    });
+                },
+            );
+            req.on('error', err => reject(err));
+            req.on('timeout', () => {
+                req.destroy(new Error('transcribe service request timeout'));
+            });
+            req.write(payload);
+            req.end();
+        });
     }
 
     /**

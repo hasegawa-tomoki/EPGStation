@@ -66,6 +66,14 @@
                         <v-list-item-title>外部ストレージへ移動</v-list-item-title>
                     </v-list-item-content>
                 </v-list-item>
+                <v-list-item v-if="recordedItem.isRecording === false && recordedItem.isEncoding === false" v-on:click="requestTranscribe">
+                    <v-list-item-icon class="mr-3">
+                        <v-icon>mdi-text-box-outline</v-icon>
+                    </v-list-item-icon>
+                    <v-list-item-content>
+                        <v-list-item-title>文字起こし</v-list-item-title>
+                    </v-list-item-content>
+                </v-list-item>
                 <v-list-item v-on:click="openDeleteDialog">
                     <v-list-item-icon class="mr-3">
                         <v-icon>mdi-delete</v-icon>
@@ -187,6 +195,21 @@ export default class RecordedItemMenu extends Vue {
 
     public async stopEncode(): Promise<void> {
         this.$emit('stopEncode', this.recordedItem.id);
+    }
+
+    public async requestTranscribe(): Promise<void> {
+        try {
+            await this.recordedApiModel.requestTranscribe(this.recordedItem.id);
+            this.snackbarState.open({
+                color: 'success',
+                text: '文字起こしジョブを投入しました',
+            });
+        } catch (err) {
+            this.snackbarState.open({
+                color: 'error',
+                text: '文字起こし要求に失敗しました',
+            });
+        }
     }
 
     public async openDeleteDialog(): Promise<void> {

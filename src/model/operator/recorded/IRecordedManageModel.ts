@@ -40,4 +40,5 @@ export default interface IRecordedManageModel {
     dropLogFileCleanup(): Promise<void>;
     removeRuleId(ruleId: apid.RuleId): Promise<void>;
     moveToExternalStorage(option: MoveToExternalStorageOption): Promise<void>;
+    requestTranscribe(recordedId: apid.RecordedId): Promise<void>;
 }

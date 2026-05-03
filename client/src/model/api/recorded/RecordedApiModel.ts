@@ -114,4 +114,12 @@ export default class RecordedApiModel implements IRecordedApiModel {
     public async moveToExternalStorage(recordedId: apid.RecordedId, option: apid.MoveToExternalStorageOption): Promise<void> {
         await this.repository.post(`/recorded/${recordedId}/move-external`, option);
     }
+
+    /**
+     * 録画の文字起こしを要求する (transcribe フラグ ON + transcribe サービスへ enqueue)
+     * @param recordedId: apid.RecordedId
+     */
+    public async requestTranscribe(recordedId: apid.RecordedId): Promise<void> {
+        await this.repository.post(`/recorded/${recordedId}/transcribe`);
+    }
 }

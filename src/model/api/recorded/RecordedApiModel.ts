@@ -140,6 +140,15 @@ export default class RecordedApiModel implements IRecordedApiModel {
     }
 
     /**
+     * 録画を transcribe フラグ ON にして transcribe サービスに enqueue する
+     * @param recordedId: apid.RecordedId
+     * @return Promise<void>
+     */
+    public requestTranscribe(recordedId: apid.RecordedId): Promise<void> {
+        return this.ipc.recorded.requestTranscribe(recordedId);
+    }
+
+    /**
      * ファイルのクリーンアップ
      */
     public async fileCleanup(): Promise<void> {

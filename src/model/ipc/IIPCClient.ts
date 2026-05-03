@@ -30,6 +30,7 @@ export interface IPCRecordedManageModel {
     videoFileCleanup(): Promise<void>;
     dropLogFileCleanup(): Promise<void>;
     moveToExternalStorage(option: MoveToExternalStorageOption): Promise<void>;
+    requestTranscribe(recordedId: apid.RecordedId): Promise<void>;
 }
 
 export interface IPCRecordedTagManageModel {

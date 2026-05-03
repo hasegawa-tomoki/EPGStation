@@ -91,6 +91,7 @@ export enum RecordedFunctions {
     videoFileCleanup = 'videoFileCleanup',
     dropLogFileCleanup = 'dropLogFileCleanup',
     moveToExternalStorage = 'moveToExternalStorage',
+    requestTranscribe = 'requestTranscribe',
 }
 
 /**

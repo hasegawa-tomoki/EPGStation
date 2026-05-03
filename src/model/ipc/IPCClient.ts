@@ -333,6 +333,15 @@ export default class IPCClient implements IIPCClient {
                     30 * 60 * 1000, // タイムアウトを 30 分に延長 (NAS コピーが大容量ファイルで時間がかかる想定)
                 );
             },
+            requestTranscribe: (recordedId: apid.RecordedId) => {
+                return this.send({
+                    model: ModelName.recorded,
+                    func: RecordedFunctions.requestTranscribe,
+                    args: {
+                        recordedId: recordedId,
+                    },
+                });
+            },
         };
     }
 

@@ -12,4 +12,5 @@ export default interface IRecordedApiModel {
     addUploadedVideoFile(option: UploadedVideoFileOption): Promise<void>;
     createNewRecorded(option: apid.CreateNewRecordedOption): Promise<apid.RecordedId>;
     moveToExternalStorage(option: MoveToExternalStorageOption): Promise<void>;
+    requestTranscribe(recordedId: apid.RecordedId): Promise<void>;
 }

@@ -296,6 +296,13 @@ export default class IPCServer implements IIPCServer {
             await this.recordedManage.moveToExternalStorage(option);
         };
 
+        // requestTranscribe
+        index[RecordedFunctions.requestTranscribe] = async msg => {
+            const recordedId = this.getArgsValue<apid.RecordedId>(msg, 'recordedId');
+
+            await this.recordedManage.requestTranscribe(recordedId);
+        };
+
         return index;
     }
 

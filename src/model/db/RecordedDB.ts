@@ -254,6 +254,33 @@ export default class RecordedDB implements IRecordedDB {
     }
 
     /**
+     * transcribe フラグを更新する
+     * @param recordedId: apid.RecordedId
+     * @param transcribe: boolean
+     * @return Promise<void>
+     */
+    public async setTranscribe(recordedId: apid.RecordedId, transcribe: boolean): Promise<void> {
+        const recorded = await this.findId(recordedId);
+        if (recorded === null) {
+            throw new Error('RecordedIsNull');
+        }
+
+        if (recorded.transcribe === transcribe) {
+            return;
+        }
+
+        const connection = await this.op.getConnection();
+        const queryBuilder = connection
+            .createQueryBuilder()
+            .update(Recorded)
+            .set({ transcribe: transcribe })
+            .where({ id: recordedId });
+        await this.promieRetry.run(() => {
+            return queryBuilder.execute();
+        });
+    }
+
+    /**
      * 指定した録画番組情報を 1 件削除
      * @param recordedId: apid.RecordedId
      * @return Promise<void>
