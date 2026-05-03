@@ -281,6 +281,7 @@ export default class SearchState implements ISearchState {
             allowEndLack: true,
             avoidDuplicate: this.settingModel.getSavedValue().isCheckAvoidDuplicate,
             periodToAvoidDuplicate: null,
+            transcribe: false,
         };
     }
 
@@ -352,6 +353,10 @@ export default class SearchState implements ISearchState {
 
         if (typeof rule.encodeOption !== 'undefined') {
             this.setEncodeOption(rule.encodeOption);
+        }
+
+        if (this.reserveOption !== null) {
+            this.reserveOption.transcribe = rule.transcribe === true;
         }
     }
 
@@ -1247,6 +1252,10 @@ export default class SearchState implements ISearchState {
 
         if (this.encodeOption !== null) {
             rule.encodeOption = this.createReserveEncodedOption(this.encodeOption);
+        }
+
+        if (this.reserveOption !== null && this.reserveOption.transcribe === true) {
+            rule.transcribe = true;
         }
 
         return rule;

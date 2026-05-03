@@ -117,6 +117,7 @@ export interface ReserveOption {
     allowEndLack: boolean; // 末尾切れを許可するか
     avoidDuplicate: boolean; // 録画済みの重複番組を排除するか
     periodToAvoidDuplicate: number | null; // 重複を避ける期間
+    transcribe: boolean; // 音声から概要を生成する
 }
 
 /**

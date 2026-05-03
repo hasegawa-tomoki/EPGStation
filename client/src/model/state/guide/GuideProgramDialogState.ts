@@ -235,6 +235,10 @@ export default class GuideProgramDialogState implements IGuideProgramDialogState
             };
         }
 
+        if (this.setting.tmp.transcribe === true) {
+            option.transcribe = true;
+        }
+
         await this.reservesApiModel.add(option);
     }
 

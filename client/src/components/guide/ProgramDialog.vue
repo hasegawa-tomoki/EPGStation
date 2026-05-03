@@ -31,7 +31,8 @@
                 <v-divider></v-divider>
                 <div class="pa-2 encode-action">
                     <div v-if="dialogState.reserve === null" class="overflow-x-hidden">
-                        <div class="d-flex align-center justify-end">
+                        <div class="d-flex align-center justify-end flex-wrap">
+                            <v-checkbox class="mx-1 my-0 pr-2" label="音声から概要を生成する" v-model="dialogSetting.tmp.transcribe"></v-checkbox>
                             <v-checkbox class="mx-1 my-0 pr-2" label="元ファイル削除" v-model="dialogSetting.tmp.isDeleteOriginalAfterEncode"></v-checkbox>
                             <v-select :items="dialogState.getEncodeList()" v-model="dialogSetting.tmp.encode" :menu-props="{ auto: true }" class="encode-selector"></v-select>
                         </div>

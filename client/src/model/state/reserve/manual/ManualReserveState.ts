@@ -21,6 +21,7 @@ export default class ManualReserveState implements IManualReserveState {
     };
     public reserveOption: ManualReserveOption = {
         allowEndLack: true,
+        transcribe: false,
     };
     public saveOption: ManualSaveOption = {
         parentDirectoryName: null,
@@ -136,6 +137,7 @@ export default class ManualReserveState implements IManualReserveState {
         }
 
         this.reserveOption.allowEndLack = reserveItem.allowEndLack;
+        this.reserveOption.transcribe = reserveItem.transcribe === true;
         if (typeof reserveItem.parentDirectoryName !== 'undefined') {
             this.saveOption.parentDirectoryName = reserveItem.parentDirectoryName;
         }
@@ -463,6 +465,10 @@ export default class ManualReserveState implements IManualReserveState {
         const encodeOption = this.getEncodeOption();
         if (encodeOption !== null) {
             result.encodeOption = encodeOption;
+        }
+
+        if (this.reserveOption.transcribe === true) {
+            result.transcribe = true;
         }
 
         // TODO tag

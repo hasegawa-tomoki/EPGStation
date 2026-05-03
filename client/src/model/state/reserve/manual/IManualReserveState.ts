@@ -40,6 +40,7 @@ export interface TimeSpecifiedOption {
  */
 export interface ManualReserveOption {
     allowEndLack: boolean; // 末尾切れを許可するか
+    transcribe: boolean; // 音声から概要を生成する
 }
 
 /**

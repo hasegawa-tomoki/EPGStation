@@ -13,6 +13,7 @@ export default class GuideProgramDialogSettingStorageModel extends AbstractStora
         return {
             encode: 'H.264',
             isDeleteOriginalAfterEncode: true,
+            transcribe: false,
         };
     }
 
