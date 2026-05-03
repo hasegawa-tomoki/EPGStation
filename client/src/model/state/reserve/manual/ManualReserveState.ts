@@ -80,6 +80,7 @@ export default class ManualReserveState implements IManualReserveState {
 
         this.reserveOption = {
             allowEndLack: true,
+            transcribe: false,
         };
 
         this.saveOption = {
