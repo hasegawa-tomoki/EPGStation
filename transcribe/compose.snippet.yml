@@ -1,0 +1,32 @@
+# 本番 (/opt/epgstation/compose.yml) の services: 配下に追記する例。
+# image タグは ghcr.io にビルド済みのものを ARG で書き換える運用に合わせる。
+# CPU 制御は i7-14700K (P-core 0-15, E-core 16-27) を想定。lscpu -e で実環境を要確認。
+
+  transcribe:
+    image: ghcr.io/hasegawa-tomoki/epgstation-transcribe:sha-XXXXXXX
+    volumes:
+      - /var/data/video:/app/recorded:ro            # EPGStation と同じパスでマウント (RECPATH をそのまま使うため)
+      - /var/data/epgstation/data:/app/data         # transcript 出力 (EPGStation 側からも参照可能)
+      - hf-cache:/cache/huggingface                 # モデルキャッシュ (~1.5GB) を永続化
+    environment:
+      TZ: "Asia/Tokyo"
+      WHISPER_MODEL: "kotoba-tech/kotoba-whisper-v2.0-faster"
+      WHISPER_COMPUTE_TYPE: "int8"
+      WHISPER_LANGUAGE: "ja"
+      TRANSCRIPT_OUTPUT_DIR: "/app/data/transcripts"
+    cpus: 8.0
+    cpuset: "16-27"             # E-core のみ
+    cpu_shares: 256             # 競合時に EPGStation より低優先 (default 1024)
+    mem_limit: 6g
+    restart: always
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# volumes: の末尾に追加
+#   hf-cache:
+#     driver: local
+
+# EPGStation 側 config.yml の recordingFinishCommand 例:
+# recordingFinishCommand: 'sh -c ''curl -s --max-time 5 -X POST http://transcribe:9999/transcribe -H "Content-Type: application/json" -d "{\"recordedId\":${RECORDEDID},\"recPath\":\"${RECPATH}\",\"name\":\"${NAME}\",\"channelName\":\"${CHANNELNAME}\"}" >/dev/null 2>&1 || true'''
