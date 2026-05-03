@@ -28,5 +28,10 @@
 #   hf-cache:
 #     driver: local
 
-# EPGStation 側 config.yml の recordingFinishCommand 例:
-# recordingFinishCommand: 'sh -c ''curl -s --max-time 5 -X POST http://transcribe:9999/transcribe -H "Content-Type: application/json" -d "{\"recordedId\":${RECORDEDID},\"recPath\":\"${RECPATH}\",\"name\":\"${NAME}\",\"channelName\":\"${CHANNELNAME}\"}" >/dev/null 2>&1 || true'''
+# EPGStation 側 config.yml の recordingFinishCommand 設定:
+#   recordingFinishCommand: '/usr/local/bin/node /app/data/scripts/transcribe-hook.js'
+#
+# transcribe-hook.js は repo 内 transcribe/transcribe-hook.js を
+# /var/data/epgstation/data/scripts/transcribe-hook.js に配置 (chmod +x)。
+# EPGStation の ProcessUtil.parseCmdStr は単純な空白 split のため
+# sh -c や curl の quote 構文は使えない。Node 標準モジュールでラップしている。
