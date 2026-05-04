@@ -346,11 +346,6 @@ $switch-display-width: 800px
         font-family: monospace
         font-size: 12px
         line-height: 1.6
-        max-height: 360px
-        overflow-y: auto
-        background-color: rgba(0, 0, 0, 0.03)
-        border-radius: 4px
-        padding: 8px 10px
 
 @media screen and (min-width: $switch-display-width)
     .content-0
