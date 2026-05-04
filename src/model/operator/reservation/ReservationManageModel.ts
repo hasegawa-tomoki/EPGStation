@@ -406,7 +406,7 @@ class ReservationManageModel implements IReservationManageModel {
         newReserve.encodeDirectory3 = parentReserve.encodeDirectory3;
         newReserve.isDeleteOriginalAfterEncode = parentReserve.isDeleteOriginalAfterEncode;
         newReserve.createdUser = parentReserve.createdUser;
-        newReserve.transcribe = parentReserve.transcribe;
+        newReserve.transcribe = !!parentReserve.transcribe;
 
         return newReserve;
     }
@@ -928,8 +928,8 @@ class ReservationManageModel implements IReservationManageModel {
         reserve.allowEndLack = rule.reserveOption.allowEndLack;
         // ルール由来の予約はルールの作成者を継承
         reserve.createdUser = (rule as any).createdUser ?? null;
-        // ルール由来の予約は transcribe フラグも継承
-        reserve.transcribe = rule.transcribe === true;
+        // ルール由来の予約は transcribe フラグも継承 (boolean coercion で number/boolean 両対応)
+        reserve.transcribe = !!rule.transcribe;
 
         if (typeof rule.reserveOption.tags !== 'undefined') {
             reserve.tags = JSON.stringify(rule.reserveOption.tags);
@@ -1122,7 +1122,8 @@ class ReservationManageModel implements IReservationManageModel {
                 oldReserve.ruleUpdateCnt !== newReserve.ruleUpdateCnt ||
                 oldReserve.isSkip !== newReserve.isSkip ||
                 oldReserve.isConflict !== newReserve.isConflict ||
-                oldReserve.isOverlap !== newReserve.isOverlap)
+                oldReserve.isOverlap !== newReserve.isOverlap ||
+                !!oldReserve.transcribe !== !!newReserve.transcribe)
         );
     }
 
@@ -1140,7 +1141,8 @@ class ReservationManageModel implements IReservationManageModel {
             (oldReserve.ruleUpdateCnt !== newReserve.ruleUpdateCnt ||
                 oldReserve.isSkip !== newReserve.isSkip ||
                 oldReserve.isConflict !== newReserve.isConflict ||
-                oldReserve.isOverlap !== newReserve.isOverlap)
+                oldReserve.isOverlap !== newReserve.isOverlap ||
+                !!oldReserve.transcribe !== !!newReserve.transcribe)
         );
     }
 

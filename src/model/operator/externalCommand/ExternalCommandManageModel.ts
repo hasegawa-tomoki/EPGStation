@@ -298,7 +298,7 @@ export default class ExternalCommandManageModel implements IExternalCommandManag
                     ERROR_CNT: recorded.dropLogFile?.errorCnt.toString(10) || null,
                     DROP_CNT: recorded.dropLogFile?.dropCnt.toString(10) || null,
                     SCRAMBLING_CNT: recorded.dropLogFile?.scramblingCnt.toString(10) || null,
-                    TRANSCRIBE: recorded.transcribe === true ? '1' : '0',
+                    TRANSCRIBE: recorded.transcribe ? '1' : '0',
                 },
             } as any);
 

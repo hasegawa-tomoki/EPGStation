@@ -165,7 +165,7 @@ export default class RecordedItemUtil implements IRecordedItemUtil {
         if (typeof recorded.createdUser === 'string' && recorded.createdUser.length > 0) {
             item.createdUser = recorded.createdUser;
         }
-        if (recorded.transcribe === true) {
+        if (recorded.transcribe) {
             item.transcribe = true;
         }
 

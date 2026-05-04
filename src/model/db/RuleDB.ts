@@ -452,7 +452,7 @@ export default class RuleDB implements IRuleDB {
             convertedRule.encodeOption = encodeOption;
         }
 
-        if (rule.transcribe === true) {
+        if (rule.transcribe) {
             convertedRule.transcribe = true;
         }
 
