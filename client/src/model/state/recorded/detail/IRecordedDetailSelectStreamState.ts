@@ -14,9 +14,10 @@ export default interface IRecordedDetailSelectStreamState {
     selectedStreamType: RecordedStreamType | undefined;
     selectedStreamMode: number | undefined;
     title: string | null;
-    open(videoFile: apid.VideoFile, recordedId: apid.RecordedId): void;
+    open(videoFile: apid.VideoFile, recordedId: apid.RecordedId, startAt?: number): void;
     close(): void;
     updateModeItems(): void;
     getVideoFileId(): apid.VideoFileId | null;
     getRecordedId(): apid.RecordedId | null;
+    getStartAt(): number;
 }

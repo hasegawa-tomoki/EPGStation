@@ -70,6 +70,7 @@
                                 </div>
                                 <div class="d-flex flex-wrap">
                                     <RecordedDetailEncodeButton :recordedItem="recorded.recordedItem" :videoFiles="recorded.display.videoFiles"></RecordedDetailEncodeButton>
+                                    <RecordedDetailTranscribeButton :recordedItem="recorded.recordedItem"></RecordedDetailTranscribeButton>
                                     <RecordedDetailStopEncodeButton :recordedItem="recorded.recordedItem" v-on:stopEncode="stopEncode"></RecordedDetailStopEncodeButton>
                                 </div>
                                 <RecordedDetailKodiButton :recordedItem="recorded.recordedItem" :videoFiles="recorded.display.videoFiles"></RecordedDetailKodiButton>
@@ -85,7 +86,12 @@
                         </div>
                         <div v-if="transcript !== null" class="mt-6 transcript-area">
                             <div class="subtitle-2 transcript-title">文字起こし</div>
-                            <div class="body-2 transcript-body">{{ transcript }}</div>
+                            <TranscriptViewer
+                                :text="transcript"
+                                :videoFiles="typeof recorded.display.videoFiles !== 'undefined' ? recorded.display.videoFiles : []"
+                                v-on:play="playWithStart"
+                                v-on:streaming="streamingWithStart"
+                            ></TranscriptViewer>
                         </div>
                     </div>
                     <RecordedDetailSelectStreamDialog></RecordedDetailSelectStreamDialog>
@@ -104,6 +110,8 @@ import RecordedDetailMoreButton from '@/components/recorded/detail/RecordedDetai
 import RecordedDetailPlayButton from '@/components/recorded/detail/RecordedDetailPlayButton.vue';
 import RecordedDetailSelectStreamDialog from '@/components/recorded/detail/RecordedDetailSelectStreamDialog.vue';
 import RecordedDetailStopEncodeButton from '@/components/recorded/detail/RecordedDetailStopEncodeButton.vue';
+import RecordedDetailTranscribeButton from '@/components/recorded/detail/RecordedDetailTranscribeButton.vue';
+import TranscriptViewer from '@/components/recorded/detail/TranscriptViewer.vue';
 import TitleBar from '@/components/titleBar/TitleBar.vue';
 import IRecordedApiModel from '@/model/api/recorded/IRecordedApiModel';
 import container from '@/model/ModelContainer';
@@ -126,11 +134,13 @@ Component.registerHooks(['beforeRouteUpdate', 'beforeRouteLeave']);
         TitleBar,
         RecordedDetailPlayButton,
         RecordedDetailEncodeButton,
+        RecordedDetailTranscribeButton,
         RecordedDetailStopEncodeButton,
         RecordedDetailMoreButton,
         RecordedDetailSelectStreamDialog,
         RecordedDetailKodiButton,
         DropLogDialog,
+        TranscriptViewer,
     },
 })
 export default class RecordedDetail extends Vue {
@@ -186,25 +196,39 @@ export default class RecordedDetail extends Vue {
     }
 
     public play(video: apid.VideoFile): void {
+        this.playWithStart(video, 0);
+    }
+
+    public playWithStart(video: apid.VideoFile, startAt: number): void {
         if (video.type === 'encoded' && this.setting.getSavedValue().isPreferredPlayingOnWeb === true) {
+            const query: { [key: string]: string } = {
+                videoId: video.id.toString(10),
+                recordedId: this.$route.params.id,
+            };
+            if (typeof startAt === 'number' && startAt > 0) {
+                query.t = startAt.toString();
+            }
             Util.move(this.$router, {
                 path: '/recorded/watch',
-                query: {
-                    videoId: video.id.toString(10),
-                    recordedId: this.$route.params.id,
-                },
+                query: query,
             });
 
             return;
         }
 
+        // 外部プレイヤー: URL fragment #t=<sec> に乗せる (対応プレイヤーのみベストエフォート)
         const url = this.recordedDetailState.getVideoURL(video);
-
-        location.href = url !== null ? url : this.recordedDetailState.getVideoPlayListURL(video);
+        const baseUrl = url !== null ? url : this.recordedDetailState.getVideoPlayListURL(video);
+        const sep = typeof startAt === 'number' && startAt > 0 ? `#t=${startAt}` : '';
+        location.href = `${baseUrl}${sep}`;
     }
 
     public streaming(video: apid.VideoFile): void {
-        this.streamSelectDialogState.open(video, parseInt(this.$route.params.id, 10));
+        this.streamingWithStart(video, 0);
+    }
+
+    public streamingWithStart(video: apid.VideoFile, startAt: number): void {
+        this.streamSelectDialogState.open(video, parseInt(this.$route.params.id, 10), typeof startAt === 'number' && startAt > 0 ? startAt : 0);
     }
 
     public downloadVideo(video: apid.VideoFile): void {
@@ -340,12 +364,6 @@ $switch-display-width: 800px
         font-weight: 600
         margin-bottom: 6px
         opacity: 0.7
-
-    .transcript-body
-        white-space: pre-wrap
-        font-family: monospace
-        font-size: 12px
-        line-height: 1.6
 
 @media screen and (min-width: $switch-display-width)
     .content-0

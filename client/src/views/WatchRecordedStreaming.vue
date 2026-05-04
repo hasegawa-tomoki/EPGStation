@@ -3,7 +3,7 @@
         <TitleBar title="視聴"></TitleBar>
         <transition name="page">
             <div class="video-container-wrap mx-auto">
-                <VideoContainer v-if="videoParam !== null" v-bind:videoParam="videoParam"></VideoContainer>
+                <VideoContainer v-if="videoParam !== null" v-bind:videoParam="videoParam" v-bind:initialPosition="initialPosition"></VideoContainer>
                 <WatchOnRecordedInfoCard v-if="videoParam !== null" v-bind:recordedId="videoParam.recordedId"></WatchOnRecordedInfoCard>
                 <div style="visibility: hidden">dummy</div>
             </div>
@@ -32,6 +32,7 @@ Component.registerHooks(['beforeRouteUpdate', 'beforeRouteLeave']);
 })
 export default class WatchRecordedStreaming extends Vue {
     public videoParam: VideoParam.RecordedStreamingParam | VideoParam.RecordedHLSParam | null = null;
+    public initialPosition: number = 0;
     private scrollState: IScrollPositionState = container.get<IScrollPositionState>('IScrollPositionState');
 
     @Watch('$route', { immediate: true, deep: true })
@@ -41,6 +42,8 @@ export default class WatchRecordedStreaming extends Vue {
         const recordedId = typeof this.$route.query.recordedId !== 'string' ? null : parseInt(this.$route.query.recordedId, 10);
         const streamingType = typeof this.$route.query.streamingType !== 'string' ? null : this.$route.query.streamingType;
         const mode = typeof this.$route.query.mode !== 'string' ? null : parseInt(this.$route.query.mode, 10);
+        const t = typeof this.$route.query.t !== 'string' ? NaN : parseFloat(this.$route.query.t);
+        this.initialPosition = Number.isFinite(t) && t > 0 ? t : 0;
 
         this.$nextTick(async () => {
             if (videoFileId !== null && recordedId !== null && streamingType !== null && mode !== null) {

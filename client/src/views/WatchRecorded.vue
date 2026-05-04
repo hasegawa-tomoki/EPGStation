@@ -3,7 +3,7 @@
         <TitleBar title="視聴"></TitleBar>
         <transition name="page">
             <div class="video-container-wrap mx-auto">
-                <VideoContainer v-if="videoParam !== null" v-bind:videoParam="videoParam"></VideoContainer>
+                <VideoContainer v-if="videoParam !== null" v-bind:videoParam="videoParam" v-bind:initialPosition="initialPosition"></VideoContainer>
                 <WatchOnRecordedInfoCard v-if="recordedId !== null" v-bind:recordedId="recordedId"></WatchOnRecordedInfoCard>
                 <div style="visibility: hidden">dummy</div>
             </div>
@@ -33,6 +33,7 @@ Component.registerHooks(['beforeRouteUpdate', 'beforeRouteLeave']);
 export default class WatchRecorded extends Vue {
     public videoParam: BaseVideoParam | null = null;
     public recordedId: apid.RecordedId | null = null;
+    public initialPosition: number = 0;
 
     private scrollState: IScrollPositionState = container.get<IScrollPositionState>('IScrollPositionState');
 
@@ -41,6 +42,8 @@ export default class WatchRecorded extends Vue {
         // 視聴パラメータセット
         const videoId = typeof this.$route.query.videoId !== 'string' ? null : parseInt(this.$route.query.videoId, 10);
         this.recordedId = typeof this.$route.query.recordedId !== 'string' ? null : parseInt(this.$route.query.recordedId, 10);
+        const t = typeof this.$route.query.t !== 'string' ? NaN : parseFloat(this.$route.query.t);
+        this.initialPosition = Number.isFinite(t) && t > 0 ? t : 0;
 
         this.$nextTick(async () => {
             if (videoId !== null) {

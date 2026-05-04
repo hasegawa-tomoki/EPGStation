@@ -85,13 +85,18 @@ export default class RecordedDetailSelectStreamDialog extends Vue {
             return;
         }
 
+        const startAt = this.dialogState.getStartAt();
+        const query: { [key: string]: string } = {
+            recordedId: recordedId.toString(),
+            streamingType: this.dialogState.selectedStreamType.toLowerCase(),
+            mode: this.dialogState.selectedStreamMode.toString(10),
+        };
+        if (startAt > 0) {
+            query.t = startAt.toString();
+        }
         await Util.move(this.$router, {
             path: `/recorded/streaming/${this.dialogState.getVideoFileId()}`,
-            query: {
-                recordedId: recordedId.toString(),
-                streamingType: this.dialogState.selectedStreamType.toLowerCase(),
-                mode: this.dialogState.selectedStreamMode.toString(10),
-            },
+            query: query,
         });
     }
 

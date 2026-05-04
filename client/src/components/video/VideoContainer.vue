@@ -227,6 +227,9 @@ export default class VideoContainer extends Vue {
     @Prop({ required: false })
     public isEnabledSpeedControl: boolean | undefined; // 速度調整が有効か
 
+    @Prop({ required: false })
+    public initialPosition: number | undefined; // 初回再生開始時に seek する位置 (秒)
+
     public isHideCursor: boolean = false;
     public currentTime: number = 0; // 動画再生位置 (秒)
     public duration: number = 0; // 動画終了長さ (秒)
@@ -480,6 +483,12 @@ export default class VideoContainer extends Vue {
         if (typeof this.$refs.video !== 'undefined' && (this.$refs.video as BaseVideo).paused() === true && new Date().getTime() - this.lastSeekedTime > 1000) {
             this.isShowControl = true;
             this.isHideCursor = false;
+        }
+
+        // initialPosition 指定があれば初回 canplay 時に seek
+        if (this.isFirstPlay === true && typeof this.initialPosition === 'number' && this.initialPosition > 0 && typeof this.$refs.video !== 'undefined') {
+            (this.$refs.video as BaseVideo).setCurrentTime(this.initialPosition);
+            this.updateLastSeekTime();
         }
 
         setTimeout(() => {
