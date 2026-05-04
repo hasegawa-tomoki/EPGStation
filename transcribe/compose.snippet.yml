@@ -8,16 +8,20 @@
       - /var/data/video:/app/recorded:ro            # EPGStation と同じパスでマウント (RECPATH をそのまま使うため)
       - /var/data/epgstation/data:/app/data         # transcript 出力 (EPGStation 側からも参照可能)
       - hf-cache:/cache/huggingface                 # モデルキャッシュ (~1.5GB) を永続化
+    env_file:
+      - .env                                        # HF_TOKEN を含む
     environment:
       TZ: "Asia/Tokyo"
-      WHISPER_MODEL: "kotoba-tech/kotoba-whisper-v2.0-faster"
-      WHISPER_COMPUTE_TYPE: "int8"
+      WHISPER_MODEL: "kotoba-tech/kotoba-whisper-v2.2"
       WHISPER_LANGUAGE: "ja"
+      WHISPER_CHUNK_LENGTH_S: "15"
+      WHISPER_BATCH_SIZE: "8"
+      WHISPER_ADD_PUNCTUATION: "1"
       TRANSCRIPT_OUTPUT_DIR: "/app/data/transcripts"
     cpus: 8.0
     cpuset: "16-27"             # E-core のみ
     cpu_shares: 256             # 競合時に EPGStation より低優先 (default 1024)
-    mem_limit: 6g
+    mem_limit: 12g              # transformers + pyannote + diarizers のロード時に余裕を持たせる
     restart: always
     logging:
       options:

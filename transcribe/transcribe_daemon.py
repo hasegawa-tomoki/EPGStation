@@ -3,20 +3,23 @@ import os
 import subprocess
 import threading
 import time
-import wave
 from pathlib import Path
 from queue import Queue
 from typing import Any, Optional
 
-import numpy as np
+import torch
 from fastapi import FastAPI, HTTPException
-from faster_whisper import WhisperModel
+from huggingface_hub import login as hf_login
 from pydantic import BaseModel
+from transformers import pipeline
 
-MODEL_NAME = os.environ.get("WHISPER_MODEL", "kotoba-tech/kotoba-whisper-v2.0-faster")
-COMPUTE_TYPE = os.environ.get("WHISPER_COMPUTE_TYPE", "int8")
+MODEL_NAME = os.environ.get("WHISPER_MODEL", "kotoba-tech/kotoba-whisper-v2.2")
 LANGUAGE = os.environ.get("WHISPER_LANGUAGE", "ja")
-BEAM_SIZE = int(os.environ.get("WHISPER_BEAM_SIZE", "5"))
+CHUNK_LENGTH_S = int(os.environ.get("WHISPER_CHUNK_LENGTH_S", "15"))
+BATCH_SIZE = int(os.environ.get("WHISPER_BATCH_SIZE", "8"))
+ADD_PUNCTUATION = os.environ.get("WHISPER_ADD_PUNCTUATION", "1") not in ("0", "false", "False")
+ADD_SILENCE_S = float(os.environ.get("WHISPER_ADD_SILENCE_S", "0.0"))
+HF_TOKEN = os.environ.get("HF_TOKEN") or os.environ.get("HUGGINGFACE_HUB_TOKEN")
 OUTPUT_DIR = Path(os.environ.get("TRANSCRIPT_OUTPUT_DIR", "/app/data/transcripts"))
 TMP_DIR = Path(os.environ.get("TRANSCRIBE_TMP_DIR", "/tmp"))
 
@@ -25,6 +28,12 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s %(name)s %(message)s",
 )
 log = logging.getLogger("transcribe")
+
+if HF_TOKEN:
+    log.info("authenticating to Hugging Face")
+    hf_login(token=HF_TOKEN, add_to_git_credential=False)
+else:
+    log.warning("HF_TOKEN is not set; pyannote diarization model load will fail")
 
 app = FastAPI()
 job_queue: "Queue[TranscribeRequest]" = Queue()
@@ -57,31 +66,11 @@ def _extract_wav(rec_path: str, out_wav: str) -> None:
     )
 
 
-def _load_audio(wav_path: str) -> tuple[np.ndarray, int]:
-    with wave.open(wav_path, "rb") as w:
-        sr = w.getframerate()
-        raw = w.readframes(w.getnframes())
-    audio = np.frombuffer(raw, dtype=np.int16).astype(np.float32) / 32768.0
-    return audio, sr
-
-
-def _build_initial_prompt(req: "TranscribeRequest") -> Optional[str]:
-    """番組情報 (name / channelName / description) を whisper の文脈プロンプトとして組み立てる。
-    Whisper の initial_prompt は 224 token 程度が上限なので合計 400 文字程度に切り詰める。"""
-    parts: list[str] = []
-    if req.channelName:
-        parts.append(req.channelName.strip())
-    if req.name:
-        parts.append(req.name.strip())
-    if req.description:
-        parts.append(req.description.strip())
-    if not parts:
-        return None
-    prompt = " ".join(parts)
-    # 半角換算 ~400 文字 (日本語なら ~150-200 token、initial_prompt の 224 token 内に収まりやすい)
-    if len(prompt) > 400:
-        prompt = prompt[:400]
-    return prompt
+def _format_line(start: float, end: float, speaker: Optional[str], text: str) -> str:
+    text = (text or "").strip()
+    if speaker:
+        return f"[{start:7.1f}-{end:7.1f}] ({speaker}) {text}"
+    return f"[{start:7.1f}-{end:7.1f}] {text}"
 
 
 def _transcribe_one(req: "TranscribeRequest") -> None:
@@ -96,32 +85,29 @@ def _transcribe_one(req: "TranscribeRequest") -> None:
     t0 = time.time()
     _extract_wav(req.recPath, str(wav_path))
 
-    audio, sr = _load_audio(str(wav_path))
-    duration = len(audio) / sr
-
-    initial_prompt = _build_initial_prompt(req)
-    _update_status(
-        rec_id,
-        state="transcribing",
-        durationSec=round(duration, 1),
-        promptLen=len(initial_prompt) if initial_prompt else 0,
-    )
+    _update_status(rec_id, state="transcribing")
     t1 = time.time()
-    segments, info = MODEL.transcribe(
-        audio,
-        language=LANGUAGE,
-        beam_size=BEAM_SIZE,
-        vad_filter=True,
-        vad_parameters=dict(min_silence_duration_ms=500),
-        condition_on_previous_text=False,
-        initial_prompt=initial_prompt,
-        # ハルシネーション (連続ループ) 抑制
-        no_repeat_ngram_size=3,           # 同じ 3-gram の繰り返しをデコード側で禁止
-        repetition_penalty=1.05,          # 直前トークンへの軽いペナルティ
-        compression_ratio_threshold=2.2,  # 圧縮率が高い (= 同じ文字の繰り返し) segment は fallback で再生成
-    )
-    lines = [f"[{s.start:7.1f}-{s.end:7.1f}] {s.text}" for s in segments]
+    pipe_kwargs: dict[str, Any] = {
+        "chunk_length_s": CHUNK_LENGTH_S,
+        "add_punctuation": ADD_PUNCTUATION,
+    }
+    if ADD_SILENCE_S > 0:
+        pipe_kwargs["add_silence_start"] = ADD_SILENCE_S
+        pipe_kwargs["add_silence_end"] = ADD_SILENCE_S
+    result = PIPE(str(wav_path), **pipe_kwargs)
     elapsed = time.time() - t1
+
+    chunks = result.get("chunks", []) if isinstance(result, dict) else []
+    lines = []
+    last_end = 0.0
+    for c in chunks:
+        ts = c.get("timestamp") or [0.0, 0.0]
+        start = float(ts[0]) if ts[0] is not None else last_end
+        end = float(ts[1]) if ts[1] is not None else start
+        last_end = end
+        speaker = c.get("speaker_id") or ""
+        text = c.get("text") or ""
+        lines.append(_format_line(start, end, speaker, text))
 
     out_txt.write_text("\n".join(lines) + "\n", encoding="utf-8")
     try:
@@ -135,12 +121,14 @@ def _transcribe_one(req: "TranscribeRequest") -> None:
         outputPath=str(out_txt),
         transcribeSec=round(elapsed, 1),
         totalSec=round(time.time() - t0, 1),
-        speedRealtime=round(duration / elapsed, 2) if elapsed > 0 else None,
+        approxAudioSec=round(last_end, 1),
+        speedRealtime=round(last_end / elapsed, 2) if elapsed > 0 and last_end > 0 else None,
         finishedAt=time.time(),
     )
     log.info(
-        f"transcribed {rec_id}: audio={duration:.1f}s elapsed={elapsed:.1f}s "
-        f"speed={duration / elapsed:.2f}x realtime"
+        f"transcribed {rec_id}: elapsed={elapsed:.1f}s "
+        f"approx_audio={last_end:.1f}s "
+        f"speed={last_end / elapsed if elapsed > 0 else 0:.2f}x realtime"
     )
 
 
@@ -160,10 +148,16 @@ def _worker() -> None:
             job_queue.task_done()
 
 
-log.info(f"loading whisper model: {MODEL_NAME} (compute={COMPUTE_TYPE})")
+log.info(f"loading kotoba-whisper pipeline: {MODEL_NAME}")
 _t0 = time.time()
-MODEL = WhisperModel(MODEL_NAME, device="cpu", compute_type=COMPUTE_TYPE)
-log.info(f"model ready in {time.time() - _t0:.1f}s")
+PIPE = pipeline(
+    model=MODEL_NAME,
+    torch_dtype=torch.float32,
+    device="cpu",
+    batch_size=BATCH_SIZE,
+    trust_remote_code=True,
+)
+log.info(f"pipeline ready in {time.time() - _t0:.1f}s")
 
 threading.Thread(target=_worker, daemon=True).start()
 

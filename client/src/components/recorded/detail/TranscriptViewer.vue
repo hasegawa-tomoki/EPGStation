@@ -3,6 +3,7 @@
         <div v-for="(line, idx) in lines" :key="idx" class="transcript-line">
             <span v-if="line.startAt !== null" class="time-tag" v-on:click="onClickTime($event, line.startAt)">{{ line.time }}</span>
             <span v-else class="time-tag-plain">{{ line.time }}</span>
+            <span v-if="line.speaker" class="speaker-tag" :style="{ color: speakerColor(line.speaker) }">({{ line.speaker }})</span>
             <span class="transcript-text">{{ line.body }}</span>
         </div>
         <v-menu v-model="isMenuOpen" :position-x="menuX" :position-y="menuY" absolute offset-y>
@@ -39,7 +40,10 @@ interface TranscriptLine {
     time: string;
     body: string;
     startAt: number | null;
+    speaker: string | null;
 }
+
+const SPEAKER_PALETTE = ['#1976d2', '#d81b60', '#388e3c', '#f57c00', '#7b1fa2', '#0097a7', '#5d4037', '#c2185b'];
 
 @Component({})
 export default class TranscriptViewer extends Vue {
@@ -66,21 +70,30 @@ export default class TranscriptViewer extends Vue {
 
     private parse(): void {
         const result: TranscriptLine[] = [];
-        const re = /^(\[\s*(\d+(?:\.\d+)?)-\s*\d+(?:\.\d+)?\])\s?(.*)$/;
+        const re = /^(\[\s*(\d+(?:\.\d+)?)-\s*\d+(?:\.\d+)?\])\s?(?:\(([^)]+)\)\s?)?(.*)$/;
         const src = typeof this.text === 'string' ? this.text : '';
         for (const raw of src.split('\n')) {
             const m = raw.match(re);
             if (m !== null) {
                 result.push({
                     time: m[1],
-                    body: m[3],
+                    body: m[4],
                     startAt: parseFloat(m[2]),
+                    speaker: m[3] ?? null,
                 });
             } else {
-                result.push({ time: raw, body: '', startAt: null });
+                result.push({ time: raw, body: '', startAt: null, speaker: null });
             }
         }
         this.lines = result;
+    }
+
+    public speakerColor(speaker: string): string {
+        let hash = 0;
+        for (let i = 0; i < speaker.length; i++) {
+            hash = (hash * 31 + speaker.charCodeAt(i)) >>> 0;
+        }
+        return SPEAKER_PALETTE[hash % SPEAKER_PALETTE.length];
     }
 
     public onClickTime(e: MouseEvent, startAt: number): void {
@@ -135,4 +148,8 @@ export default class TranscriptViewer extends Vue {
 
     .time-tag-plain
         opacity: 0.6
+
+    .speaker-tag
+        margin-left: 4px
+        font-weight: 600
 </style>
