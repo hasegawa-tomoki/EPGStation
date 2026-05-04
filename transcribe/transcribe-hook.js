@@ -31,6 +31,7 @@ const payload = JSON.stringify({
     recPath,
     name: process.env.NAME || '',
     channelName: process.env.CHANNELNAME || '',
+    description: process.env.DESCRIPTION || '',
 });
 
 const req = http.request(

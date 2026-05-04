@@ -561,6 +561,7 @@ export default class RecordedManageModel implements IRecordedManageModel {
             recPath: recPath,
             name: recorded.name,
             channelName: channelName,
+            description: recorded.description ?? '',
         });
         await this.postTranscribeEnqueue(baseUrl, payload);
     }

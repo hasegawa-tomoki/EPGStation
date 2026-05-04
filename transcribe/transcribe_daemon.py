@@ -37,6 +37,7 @@ class TranscribeRequest(BaseModel):
     recPath: str
     name: Optional[str] = None
     channelName: Optional[str] = None
+    description: Optional[str] = None
 
 
 def _update_status(rec_id: str, **kwargs: Any) -> None:
@@ -64,6 +65,25 @@ def _load_audio(wav_path: str) -> tuple[np.ndarray, int]:
     return audio, sr
 
 
+def _build_initial_prompt(req: "TranscribeRequest") -> Optional[str]:
+    """番組情報 (name / channelName / description) を whisper の文脈プロンプトとして組み立てる。
+    Whisper の initial_prompt は 224 token 程度が上限なので合計 400 文字程度に切り詰める。"""
+    parts: list[str] = []
+    if req.channelName:
+        parts.append(req.channelName.strip())
+    if req.name:
+        parts.append(req.name.strip())
+    if req.description:
+        parts.append(req.description.strip())
+    if not parts:
+        return None
+    prompt = " ".join(parts)
+    # 半角換算 ~400 文字 (日本語なら ~150-200 token、initial_prompt の 224 token 内に収まりやすい)
+    if len(prompt) > 400:
+        prompt = prompt[:400]
+    return prompt
+
+
 def _transcribe_one(req: "TranscribeRequest") -> None:
     rec_id = str(req.recordedId)
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -79,7 +99,13 @@ def _transcribe_one(req: "TranscribeRequest") -> None:
     audio, sr = _load_audio(str(wav_path))
     duration = len(audio) / sr
 
-    _update_status(rec_id, state="transcribing", durationSec=round(duration, 1))
+    initial_prompt = _build_initial_prompt(req)
+    _update_status(
+        rec_id,
+        state="transcribing",
+        durationSec=round(duration, 1),
+        promptLen=len(initial_prompt) if initial_prompt else 0,
+    )
     t1 = time.time()
     segments, info = MODEL.transcribe(
         audio,
@@ -88,6 +114,7 @@ def _transcribe_one(req: "TranscribeRequest") -> None:
         vad_filter=True,
         vad_parameters=dict(min_silence_duration_ms=500),
         condition_on_previous_text=False,
+        initial_prompt=initial_prompt,
     )
     lines = [f"[{s.start:7.1f}-{s.end:7.1f}] {s.text}" for s in segments]
     elapsed = time.time() - t1
