@@ -115,6 +115,10 @@ def _transcribe_one(req: "TranscribeRequest") -> None:
         vad_parameters=dict(min_silence_duration_ms=500),
         condition_on_previous_text=False,
         initial_prompt=initial_prompt,
+        # ハルシネーション (連続ループ) 抑制
+        no_repeat_ngram_size=3,           # 同じ 3-gram の繰り返しをデコード側で禁止
+        repetition_penalty=1.05,          # 直前トークンへの軽いペナルティ
+        compression_ratio_threshold=2.2,  # 圧縮率が高い (= 同じ文字の繰り返し) segment は fallback で再生成
     )
     lines = [f"[{s.start:7.1f}-{s.end:7.1f}] {s.text}" for s in segments]
     elapsed = time.time() - t1
