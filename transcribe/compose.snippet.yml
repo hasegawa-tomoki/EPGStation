@@ -13,6 +13,7 @@
       WHISPER_MODEL: "kotoba-tech/kotoba-whisper-v2.0-faster"
       WHISPER_COMPUTE_TYPE: "int8"
       WHISPER_LANGUAGE: "ja"
+      DENOISE_BACKEND: "deepfilternet"   # none で無効化
       TRANSCRIPT_OUTPUT_DIR: "/app/data/transcripts"
     cpus: 8.0
     cpuset: "16-27"             # E-core のみ

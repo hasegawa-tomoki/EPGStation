@@ -19,6 +19,7 @@ LANGUAGE = os.environ.get("WHISPER_LANGUAGE", "ja")
 BEAM_SIZE = int(os.environ.get("WHISPER_BEAM_SIZE", "5"))
 OUTPUT_DIR = Path(os.environ.get("TRANSCRIPT_OUTPUT_DIR", "/app/data/transcripts"))
 TMP_DIR = Path(os.environ.get("TRANSCRIBE_TMP_DIR", "/tmp"))
+DENOISE_BACKEND = os.environ.get("DENOISE_BACKEND", "none").lower()  # none | deepfilternet
 
 logging.basicConfig(
     level=logging.INFO,
@@ -45,12 +46,12 @@ def _update_status(rec_id: str, **kwargs: Any) -> None:
         job_status.setdefault(rec_id, {}).update(kwargs)
 
 
-def _extract_wav(rec_path: str, out_wav: str) -> None:
+def _extract_wav(rec_path: str, out_wav: str, sample_rate: int = 16000) -> None:
     subprocess.run(
         [
             "ffmpeg", "-y", "-loglevel", "error",
             "-i", rec_path,
-            "-vn", "-ar", "16000", "-ac", "1", "-c:a", "pcm_s16le",
+            "-vn", "-ar", str(sample_rate), "-ac", "1", "-c:a", "pcm_s16le",
             out_wav,
         ],
         check=True,
@@ -84,19 +85,58 @@ def _build_initial_prompt(req: "TranscribeRequest") -> Optional[str]:
     return prompt
 
 
+def _denoise_and_resample_to_16k(audio_48k: np.ndarray) -> np.ndarray:
+    """DeepFilterNet 3 で BGM/ノイズを抑制し、whisper 用に 16kHz にダウンサンプルして返す。"""
+    import torch
+    import torchaudio.functional as taF
+
+    audio_t = torch.from_numpy(audio_48k).float().unsqueeze(0)  # (1, samples)
+    enhanced = DF_ENHANCE(DF_MODEL, DF_STATE, audio_t)  # type: ignore[name-defined]
+    if isinstance(enhanced, torch.Tensor):
+        enhanced_t = enhanced
+    else:
+        enhanced_t = torch.from_numpy(enhanced)
+    if enhanced_t.dim() == 2:
+        enhanced_t = enhanced_t.squeeze(0)
+    audio_16k = taF.resample(enhanced_t, 48000, 16000).numpy()
+    return audio_16k.astype(np.float32, copy=False)
+
+
+def _prepare_audio(req: "TranscribeRequest", rec_id: str) -> tuple[np.ndarray, int, float]:
+    """rec_path から audio (16kHz mono float32) を取得。DENOISE_BACKEND=deepfilternet の場合は
+    48kHz で抽出 → DF enhance → 16kHz にダウンサンプル。"""
+    if DENOISE_BACKEND == "deepfilternet" and DF_MODEL is not None:
+        wav_path = TMP_DIR / f"transcribe-{rec_id}-48k.wav"
+        _extract_wav(req.recPath, str(wav_path), sample_rate=48000)
+        audio_48k, sr_in = _load_audio(str(wav_path))
+        try:
+            wav_path.unlink()
+        except FileNotFoundError:
+            pass
+        t_d0 = time.time()
+        audio_16k = _denoise_and_resample_to_16k(audio_48k)
+        denoise_sec = time.time() - t_d0
+        return audio_16k, 16000, denoise_sec
+    wav_path = TMP_DIR / f"transcribe-{rec_id}.wav"
+    _extract_wav(req.recPath, str(wav_path), sample_rate=16000)
+    audio, sr = _load_audio(str(wav_path))
+    try:
+        wav_path.unlink()
+    except FileNotFoundError:
+        pass
+    return audio, sr, 0.0
+
+
 def _transcribe_one(req: "TranscribeRequest") -> None:
     rec_id = str(req.recordedId)
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     TMP_DIR.mkdir(parents=True, exist_ok=True)
 
-    wav_path = TMP_DIR / f"transcribe-{rec_id}.wav"
     out_txt = OUTPUT_DIR / f"{rec_id}.txt"
 
     _update_status(rec_id, state="extracting", recPath=req.recPath, startedAt=time.time())
     t0 = time.time()
-    _extract_wav(req.recPath, str(wav_path))
-
-    audio, sr = _load_audio(str(wav_path))
+    audio, sr, denoise_sec = _prepare_audio(req, rec_id)
     duration = len(audio) / sr
 
     initial_prompt = _build_initial_prompt(req)
@@ -104,6 +144,8 @@ def _transcribe_one(req: "TranscribeRequest") -> None:
         rec_id,
         state="transcribing",
         durationSec=round(duration, 1),
+        denoiseSec=round(denoise_sec, 1) if denoise_sec > 0 else None,
+        denoiseBackend=DENOISE_BACKEND if DENOISE_BACKEND != "none" else None,
         promptLen=len(initial_prompt) if initial_prompt else 0,
     )
     t1 = time.time()
@@ -124,10 +166,6 @@ def _transcribe_one(req: "TranscribeRequest") -> None:
     elapsed = time.time() - t1
 
     out_txt.write_text("\n".join(lines) + "\n", encoding="utf-8")
-    try:
-        wav_path.unlink()
-    except FileNotFoundError:
-        pass
 
     _update_status(
         rec_id,
@@ -139,8 +177,8 @@ def _transcribe_one(req: "TranscribeRequest") -> None:
         finishedAt=time.time(),
     )
     log.info(
-        f"transcribed {rec_id}: audio={duration:.1f}s elapsed={elapsed:.1f}s "
-        f"speed={duration / elapsed:.2f}x realtime"
+        f"transcribed {rec_id}: audio={duration:.1f}s denoise={denoise_sec:.1f}s "
+        f"transcribe={elapsed:.1f}s speed={duration / elapsed:.2f}x realtime"
     )
 
 
@@ -163,7 +201,20 @@ def _worker() -> None:
 log.info(f"loading whisper model: {MODEL_NAME} (compute={COMPUTE_TYPE})")
 _t0 = time.time()
 MODEL = WhisperModel(MODEL_NAME, device="cpu", compute_type=COMPUTE_TYPE)
-log.info(f"model ready in {time.time() - _t0:.1f}s")
+log.info(f"whisper model ready in {time.time() - _t0:.1f}s")
+
+DF_MODEL = None
+DF_STATE = None
+DF_ENHANCE = None
+if DENOISE_BACKEND == "deepfilternet":
+    log.info("loading DeepFilterNet 3 for denoise/BGM suppression")
+    _t1 = time.time()
+    from df import enhance as _df_enhance, init_df as _df_init
+    DF_MODEL, DF_STATE, _ = _df_init()
+    DF_ENHANCE = _df_enhance
+    log.info(f"DeepFilterNet ready in {time.time() - _t1:.1f}s (sr={DF_STATE.sr()})")
+elif DENOISE_BACKEND != "none":
+    log.warning(f"unknown DENOISE_BACKEND={DENOISE_BACKEND}, falling back to none")
 
 threading.Thread(target=_worker, daemon=True).start()
 
@@ -195,4 +246,9 @@ def list_jobs() -> dict[str, Any]:
 
 @app.get("/healthz")
 def healthz() -> dict[str, Any]:
-    return {"ok": True, "queueSize": job_queue.qsize(), "model": MODEL_NAME}
+    return {
+        "ok": True,
+        "queueSize": job_queue.qsize(),
+        "model": MODEL_NAME,
+        "denoise": DENOISE_BACKEND,
+    }
