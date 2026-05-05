@@ -20,6 +20,7 @@ BEAM_SIZE = int(os.environ.get("WHISPER_BEAM_SIZE", "5"))
 OUTPUT_DIR = Path(os.environ.get("TRANSCRIPT_OUTPUT_DIR", "/app/data/transcripts"))
 TMP_DIR = Path(os.environ.get("TRANSCRIBE_TMP_DIR", "/tmp"))
 DENOISE_BACKEND = os.environ.get("DENOISE_BACKEND", "none").lower()  # none | deepfilternet
+DENOISE_CHUNK_S = int(os.environ.get("DENOISE_CHUNK_S", "30"))  # DF enhance chunk size (sec) for long audio
 
 logging.basicConfig(
     level=logging.INFO,
@@ -86,19 +87,29 @@ def _build_initial_prompt(req: "TranscribeRequest") -> Optional[str]:
 
 
 def _denoise_and_resample_to_16k(audio_48k: np.ndarray) -> np.ndarray:
-    """DeepFilterNet 3 で BGM/ノイズを抑制し、whisper 用に 16kHz にダウンサンプルして返す。"""
+    """DeepFilterNet 3 で BGM/ノイズを抑制し、whisper 用に 16kHz にダウンサンプルして返す。
+
+    長尺音声 (45-60 分の TS) を一括で enhance すると intermediate tensor で 12GB 超えて
+    OOM Kill される。DENOISE_CHUNK_S 秒ずつ chunk 処理して連結する。
+    """
     import torch
     import torchaudio.functional as taF
 
-    audio_t = torch.from_numpy(audio_48k).float().unsqueeze(0)  # (1, samples)
-    enhanced = DF_ENHANCE(DF_MODEL, DF_STATE, audio_t)  # type: ignore[name-defined]
-    if isinstance(enhanced, torch.Tensor):
-        enhanced_t = enhanced
-    else:
-        enhanced_t = torch.from_numpy(enhanced)
-    if enhanced_t.dim() == 2:
-        enhanced_t = enhanced_t.squeeze(0)
-    audio_16k = taF.resample(enhanced_t, 48000, 16000).numpy()
+    chunk_samples = 48000 * DENOISE_CHUNK_S
+    enhanced_chunks: list[torch.Tensor] = []
+    for start in range(0, len(audio_48k), chunk_samples):
+        chunk = audio_48k[start:start + chunk_samples]
+        chunk_t = torch.from_numpy(chunk).float().unsqueeze(0)
+        enhanced = DF_ENHANCE(DF_MODEL, DF_STATE, chunk_t)  # type: ignore[name-defined]
+        if isinstance(enhanced, torch.Tensor):
+            t = enhanced
+        else:
+            t = torch.from_numpy(enhanced)
+        if t.dim() == 2:
+            t = t.squeeze(0)
+        enhanced_chunks.append(t.detach())
+    enhanced_full = torch.cat(enhanced_chunks) if len(enhanced_chunks) > 1 else enhanced_chunks[0]
+    audio_16k = taF.resample(enhanced_full, 48000, 16000).numpy()
     return audio_16k.astype(np.float32, copy=False)
 
 
