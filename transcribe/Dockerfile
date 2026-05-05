@@ -2,7 +2,8 @@ FROM python:3.11-slim
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    HF_HOME=/cache/huggingface
+    HF_HOME=/cache/huggingface \
+    TORCH_HOME=/cache/huggingface/torch
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ffmpeg curl libsndfile1 git \

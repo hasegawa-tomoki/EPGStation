@@ -19,8 +19,10 @@ LANGUAGE = os.environ.get("WHISPER_LANGUAGE", "ja")
 BEAM_SIZE = int(os.environ.get("WHISPER_BEAM_SIZE", "5"))
 OUTPUT_DIR = Path(os.environ.get("TRANSCRIPT_OUTPUT_DIR", "/app/data/transcripts"))
 TMP_DIR = Path(os.environ.get("TRANSCRIBE_TMP_DIR", "/tmp"))
-DENOISE_BACKEND = os.environ.get("DENOISE_BACKEND", "none").lower()  # none | deepfilternet
+DENOISE_BACKEND = os.environ.get("DENOISE_BACKEND", "none").lower()  # none | deepfilternet | demucs
 DENOISE_CHUNK_S = int(os.environ.get("DENOISE_CHUNK_S", "30"))  # DF enhance chunk size (sec) for long audio
+DEMUCS_MODEL = os.environ.get("DEMUCS_MODEL", "htdemucs")
+DEMUCS_SEGMENT_S = float(os.environ.get("DEMUCS_SEGMENT_S", "7.8"))  # HT Demucs 最大 segment 長
 
 logging.basicConfig(
     level=logging.INFO,
@@ -113,9 +115,42 @@ def _denoise_and_resample_to_16k(audio_48k: np.ndarray) -> np.ndarray:
     return audio_16k.astype(np.float32, copy=False)
 
 
+def _demucs_extract_vocals_16k(rec_path: str, rec_id: str) -> np.ndarray:
+    """ffmpeg で 44.1kHz stereo を抽出 → Demucs で vocals stem 取り出し → mono 化 → 16kHz リサンプル。"""
+    import torch
+    import torchaudio
+    import torchaudio.functional as taF
+
+    wav_path = TMP_DIR / f"transcribe-{rec_id}-44k.wav"
+    subprocess.run(
+        [
+            "ffmpeg", "-y", "-loglevel", "error",
+            "-i", rec_path,
+            "-vn", "-ar", "44100", "-ac", "2", "-c:a", "pcm_s16le",
+            str(wav_path),
+        ],
+        check=True,
+    )
+    wav, sr = torchaudio.load(str(wav_path))  # (channels, samples)
+    try:
+        wav_path.unlink()
+    except FileNotFoundError:
+        pass
+
+    _origin, separated = DEMUCS_SEPARATOR.separate_tensor(wav, sr)  # type: ignore[name-defined]
+    vocals = separated["vocals"]  # (channels, samples)
+    if vocals.dim() == 2:
+        vocals = vocals.mean(dim=0)
+    vocals_16k = taF.resample(vocals, 44100, 16000).numpy()
+    return vocals_16k.astype(np.float32, copy=False)
+
+
 def _prepare_audio(req: "TranscribeRequest", rec_id: str) -> tuple[np.ndarray, int, float]:
-    """rec_path から audio (16kHz mono float32) を取得。DENOISE_BACKEND=deepfilternet の場合は
-    48kHz で抽出 → DF enhance → 16kHz にダウンサンプル。"""
+    """rec_path から audio (16kHz mono float32) を取得。
+    - DENOISE_BACKEND=deepfilternet: 48kHz 抽出 → DF enhance → 16kHz リサンプル
+    - DENOISE_BACKEND=demucs: 44.1kHz stereo 抽出 → Demucs で vocals stem → 16kHz リサンプル
+    - それ以外: 16kHz mono 抽出 (denoise なし)
+    """
     if DENOISE_BACKEND == "deepfilternet" and DF_MODEL is not None:
         wav_path = TMP_DIR / f"transcribe-{rec_id}-48k.wav"
         _extract_wav(req.recPath, str(wav_path), sample_rate=48000)
@@ -126,6 +161,11 @@ def _prepare_audio(req: "TranscribeRequest", rec_id: str) -> tuple[np.ndarray, i
             pass
         t_d0 = time.time()
         audio_16k = _denoise_and_resample_to_16k(audio_48k)
+        denoise_sec = time.time() - t_d0
+        return audio_16k, 16000, denoise_sec
+    if DENOISE_BACKEND == "demucs" and DEMUCS_SEPARATOR is not None:
+        t_d0 = time.time()
+        audio_16k = _demucs_extract_vocals_16k(req.recPath, rec_id)
         denoise_sec = time.time() - t_d0
         return audio_16k, 16000, denoise_sec
     wav_path = TMP_DIR / f"transcribe-{rec_id}.wav"
@@ -217,6 +257,7 @@ log.info(f"whisper model ready in {time.time() - _t0:.1f}s")
 DF_MODEL = None
 DF_STATE = None
 DF_ENHANCE = None
+DEMUCS_SEPARATOR = None
 if DENOISE_BACKEND == "deepfilternet":
     log.info("loading DeepFilterNet 3 for denoise/BGM suppression")
     _t1 = time.time()
@@ -224,6 +265,12 @@ if DENOISE_BACKEND == "deepfilternet":
     DF_MODEL, DF_STATE, _ = _df_init()
     DF_ENHANCE = _df_enhance
     log.info(f"DeepFilterNet ready in {time.time() - _t1:.1f}s (sr={DF_STATE.sr()})")
+elif DENOISE_BACKEND == "demucs":
+    log.info(f"loading Demucs ({DEMUCS_MODEL}) for vocals separation")
+    _t1 = time.time()
+    from demucs.api import Separator as _DemucsSeparator
+    DEMUCS_SEPARATOR = _DemucsSeparator(model=DEMUCS_MODEL, device="cpu", segment=DEMUCS_SEGMENT_S)
+    log.info(f"Demucs ready in {time.time() - _t1:.1f}s (segment={DEMUCS_SEGMENT_S}s)")
 elif DENOISE_BACKEND != "none":
     log.warning(f"unknown DENOISE_BACKEND={DENOISE_BACKEND}, falling back to none")
 

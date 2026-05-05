@@ -7,4 +7,5 @@ numpy<2
 torch==2.4.1
 torchaudio==2.4.1
 deepfilternet==0.5.6
+demucs>=4.0
 soundfile>=0.12
