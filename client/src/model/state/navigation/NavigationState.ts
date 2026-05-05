@@ -14,6 +14,7 @@ export default class NavigationState implements INavigationState {
 
     private serverConfig: IServerConfigModel;
     private setting: ISettingStorageModel;
+    private badgeCounts: { [id: string]: number } = {};
 
     constructor(@inject('IServerConfigModel') serverConfig: IServerConfigModel, @inject('ISettingStorageModel') setting: ISettingStorageModel) {
         this.serverConfig = serverConfig;
@@ -119,6 +120,7 @@ export default class NavigationState implements INavigationState {
             },
         });
         newItems.push({
+            id: 'reserves',
             icon: 'mdi-clock-outline',
             title: '予約',
             herf: {
@@ -127,6 +129,8 @@ export default class NavigationState implements INavigationState {
                     type: 'normal',
                 },
             },
+            badge: this.badgeCounts['reserves'] ?? 0,
+            badgeColor: 'red',
         });
         newItems.push({
             icon: 'mdi-clock-outline',
@@ -221,5 +225,19 @@ export default class NavigationState implements INavigationState {
      */
     public getItems(): NavigationItem[] {
         return this.items;
+    }
+
+    /**
+     * バッジ件数を更新する
+     * @param id: NavigationItem の id
+     * @param count: 表示件数 (0 のとき非表示)
+     */
+    public setBadge(id: string, count: number): void {
+        this.badgeCounts[id] = count;
+        for (const item of this.items) {
+            if (item.id === id) {
+                item.badge = count;
+            }
+        }
     }
 }

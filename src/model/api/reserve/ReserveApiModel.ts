@@ -1,9 +1,11 @@
 import { inject, injectable } from 'inversify';
 import * as apid from '../../../../api';
 import Reserve from '../../../db/entities/Reserve';
+import IChannelDB from '../../db/IChannelDB';
 import IReserveDB from '../../db/IReserveDB';
 import IRuleDB from '../../db/IRuleDB';
 import IIPCClient from '../../ipc/IIPCClient';
+import IMirakurunClientModel from '../../IMirakurunClientModel';
 import IReserveApiModel from './IReserveApiModel';
 
 @injectable()
@@ -11,15 +13,21 @@ export default class ReserveApiModel implements IReserveApiModel {
     private ipc: IIPCClient;
     private reserveDB: IReserveDB;
     private ruleDB: IRuleDB;
+    private channelDB: IChannelDB;
+    private mirakurunClient: IMirakurunClientModel;
 
     constructor(
         @inject('IIPCClient') ipc: IIPCClient,
         @inject('IReserveDB') reserveDB: IReserveDB,
         @inject('IRuleDB') ruleDB: IRuleDB,
+        @inject('IChannelDB') channelDB: IChannelDB,
+        @inject('IMirakurunClientModel') mirakurunClient: IMirakurunClientModel,
     ) {
         this.ipc = ipc;
         this.reserveDB = reserveDB;
         this.ruleDB = ruleDB;
+        this.channelDB = channelDB;
+        this.mirakurunClient = mirakurunClient;
     }
 
     /**
@@ -322,6 +330,99 @@ export default class ReserveApiModel implements IReserveApiModel {
         }
 
         return result;
+    }
+
+    /**
+     * チューナーの占有予約情報を返す (使用状況可視化用)
+     * 内部の reserves を時刻イベント順に並べ、Tuner クラスと同じ条件
+     * (受信可能 type かつ 同 channel) で割り当てシミュレーションを行う。
+     */
+    public async getTunerAllocations(isHalfWidth: boolean): Promise<apid.TunerAllocations> {
+        const tunerDevices = await this.mirakurunClient.getClient().getTuners();
+
+        // schedule 範囲: 現在以降の有効予約
+        const now = new Date().getTime();
+        const [reserves] = await this.reserveDB.findAll({
+            type: 'normal',
+            isHalfWidth: isHalfWidth,
+        });
+        const active = reserves.filter(r => !r.isSkip && !r.isOverlap && !r.isConflict && r.endAt > now);
+
+        // 時刻イベント生成 (start/end)
+        type Ev = { at: number; kind: 'start' | 'end'; idx: number };
+        const events: Ev[] = [];
+        active.forEach((r, idx) => {
+            events.push({ at: r.startAt, kind: 'start', idx });
+            events.push({ at: r.endAt, kind: 'end', idx });
+        });
+        events.sort((a, b) => (a.at !== b.at ? a.at - b.at : a.kind === 'end' ? -1 : 1));
+
+        // 単純な割り当てシミュレーション (Tuner.add と同じ条件: types 一致 かつ 0 件 or 同じ channel)
+        type TunerSlot = { types: string[]; channel: string | null; activeCount: number };
+        const slots: TunerSlot[] = tunerDevices.map(t => ({
+            types: t.types as string[],
+            channel: null,
+            activeCount: 0,
+        }));
+        const assignment = new Map<number, number>(); // reserveId -> tunerIndex
+        const liveByIdx = new Map<number, number>(); // active reserve idx -> assigned tuner index
+
+        for (const ev of events) {
+            const r = active[ev.idx];
+            if (ev.kind === 'start') {
+                let assigned = -1;
+                for (let i = 0; i < slots.length; i++) {
+                    if (slots[i].types.indexOf(r.channelType) === -1) continue;
+                    if (slots[i].activeCount === 0 || slots[i].channel === r.channel) {
+                        if (slots[i].activeCount === 0) slots[i].channel = r.channel;
+                        slots[i].activeCount++;
+                        assigned = i;
+                        break;
+                    }
+                }
+                if (assigned >= 0) {
+                    assignment.set(r.id, assigned);
+                    liveByIdx.set(ev.idx, assigned);
+                }
+            } else {
+                const i = liveByIdx.get(ev.idx);
+                if (typeof i === 'number') {
+                    slots[i].activeCount--;
+                    if (slots[i].activeCount === 0) slots[i].channel = null;
+                    liveByIdx.delete(ev.idx);
+                }
+            }
+        }
+
+        // channel 名を取得
+        const channels = await this.channelDB.findAll();
+        const channelMap = new Map<apid.ChannelId, { name: string; halfWidthName: string }>();
+        for (const c of channels) {
+            channelMap.set(c.id, { name: c.name, halfWidthName: c.halfWidthName });
+        }
+
+        const allocations: apid.TunerAllocationItem[] = [];
+        for (const r of active) {
+            const tunerIndex = assignment.get(r.id);
+            if (typeof tunerIndex !== 'number') continue;
+            const ch = channelMap.get(r.channelId);
+            allocations.push({
+                reserveId: r.id,
+                tunerIndex,
+                startAt: r.startAt,
+                endAt: r.endAt,
+                name: isHalfWidth ? r.halfWidthName : r.name,
+                channelId: r.channelId,
+                channelName: ch === undefined ? '' : isHalfWidth ? ch.halfWidthName : ch.name,
+                channelType: r.channelType,
+            });
+        }
+        allocations.sort((a, b) => a.startAt - b.startAt);
+
+        return {
+            tuners: tunerDevices.map((t, i) => ({ index: i, types: t.types as string[] })),
+            allocations,
+        };
     }
 
     /**

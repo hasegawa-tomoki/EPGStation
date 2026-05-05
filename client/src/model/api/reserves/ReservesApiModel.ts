@@ -87,6 +87,17 @@ export default class ReservesApiModel implements IReservesApiModel {
     }
 
     /**
+     * チューナー使用状況の取得
+     */
+    public async getTunerAllocations(isHalfWidth: boolean): Promise<apid.TunerAllocations> {
+        const result = await this.repository.get('/reserves/tuner-allocation', {
+            params: { isHalfWidth },
+        });
+
+        return result.data;
+    }
+
+    /**
      * 予約のキャンセル
      * @param reserveId: ReserveId
      * @return Promise<void>

@@ -642,6 +642,18 @@ export default class VideoContainer extends Vue {
     }
 
     /**
+     * 指定の絶対時刻 (秒) に seek する (parent からの操作用)
+     */
+    public seekTo(time: number): void {
+        if (typeof this.$refs.video === 'undefined' || time < 0) {
+            return;
+        }
+        const clamped = this.duration > 0 ? Math.min(time, this.duration) : time;
+        (this.$refs.video as BaseVideo).setCurrentTime(clamped);
+        this.updateLastSeekTime();
+    }
+
+    /**
      * 指定した時間だけ currentTime を戻す
      * @param time: number 戻す時間 (秒)
      */

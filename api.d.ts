@@ -187,6 +187,31 @@ export interface ReserveCnts {
 }
 
 /**
+ * チューナーの占有予約情報 (チューナー使用状況可視化用)
+ */
+export interface TunerAllocationItem {
+    reserveId: ReserveId;
+    tunerIndex: number; // 割り当てられた tuner の index
+    startAt: UnixtimeMS;
+    endAt: UnixtimeMS;
+    name: string;
+    channelId: ChannelId;
+    channelName: string;
+    channelType: string; // "GR"|"BS"|"CS"|"SKY"
+    isHalfWidth?: boolean;
+}
+
+export interface TunerInfoItem {
+    index: number;
+    types: string[]; // 受信可能な放送波 ["GR"]、["BS","CS"]、等
+}
+
+export interface TunerAllocations {
+    tuners: TunerInfoItem[];
+    allocations: TunerAllocationItem[];
+}
+
+/**
  * 放送波の状態
  * true のもが有効
  */

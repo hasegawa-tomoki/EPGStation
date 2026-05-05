@@ -10,7 +10,11 @@ export const post: Operation = async (req, res) => {
         await recordedApiModel.requestTranscribe(parseInt(req.params.recordedId, 10));
         api.responseJSON(res, 200, { code: 200 });
     } catch (err: any) {
-        if (err.message === 'RecordedIsNull' || err.message === 'VideoFileNotFound' || err.message === 'VideoFilePathNotFound') {
+        if (
+            err.message === 'RecordedIsNull' ||
+            err.message === 'VideoFileNotFound' ||
+            err.message === 'VideoFilePathNotFound'
+        ) {
             api.responseError(res, { code: 404, message: err.message });
             return;
         }

@@ -28,7 +28,15 @@
                     </v-list-item-icon>
 
                     <v-list-item-content>
-                        <v-list-item-title>{{ item.title }}</v-list-item-title>
+                        <v-list-item-title>
+                            {{ item.title }}
+                            <v-badge
+                                v-if="typeof item.badge === 'number' && item.badge > 0"
+                                :color="item.badgeColor || 'red'"
+                                :content="item.badge"
+                                inline
+                            ></v-badge>
+                        </v-list-item-title>
                     </v-list-item-content>
                 </v-list-item>
             </v-list-item-group>
@@ -44,6 +52,7 @@ import INavigationState from '@/model/state/navigation/INavigationState';
 import ISocketIOModel from '@/model/socketio/ISocketIOModel';
 import ISnackbarState from '@/model/state/snackbar/ISnackbarState';
 import IVersionState from '@/model/state/version/IVersionState';
+import IReservesApiModel from '@/model/api/reserves/IReservesApiModel';
 import { ISettingStorageModel, ISettingValue } from '@/model/storage/setting/ISettingStorageModel';
 import { Component, Vue, Watch } from 'vue-property-decorator';
 import { Location } from 'vue-router';
@@ -64,15 +73,27 @@ export default class Navigation extends Vue {
     private socketIoModel: ISocketIOModel = container.get<ISocketIOModel>('ISocketIOModel');
     private snackbarState: ISnackbarState = container.get<ISnackbarState>('ISnackbarState');
     private versionState: IVersionState = container.get<IVersionState>('IVersionState');
+    private reservesApiModel: IReservesApiModel = container.get<IReservesApiModel>('IReservesApiModel');
     private onUpdateStatusCallback = (async (): Promise<void> => {
-        await this.versionState.fetchData();
+        await Promise.all([this.versionState.fetchData(), this.fetchConflictBadge()]);
     }).bind(this);
 
-    public created(): void {
+    private async fetchConflictBadge(): Promise<void> {
+        try {
+            const cnts = await this.reservesApiModel.getCnts();
+            this.navigationState.setBadge('reserves', cnts.conflicts);
+        } catch (err) {
+            // 件数取得失敗は致命的でないので無視
+        }
+    }
+
+    public async created(): Promise<void> {
         this.navigationState.updateItems(this.$route);
 
         // socket.io イベント
         this.socketIoModel.onUpdateState(this.onUpdateStatusCallback);
+
+        await this.fetchConflictBadge();
     }
 
     public beforeDestroy(): void {

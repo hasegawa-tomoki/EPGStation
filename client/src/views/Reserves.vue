@@ -13,8 +13,17 @@
                 <ReservesMainMenu v-on:edit="onEdit"></ReservesMainMenu>
             </template>
         </TitleBar>
+        <v-tabs v-model="currentTab" v-on:change="onTabChange" show-arrows class="reserves-tabs">
+            <v-tab v-for="tab in tabs" :key="tab.value" :href="`#${tab.value}`">
+                {{ tab.label }}
+                <v-badge v-if="tab.value === 'conflict' && conflictCount > 0" color="red" :content="conflictCount" inline></v-badge>
+            </v-tab>
+        </v-tabs>
         <transition name="page">
-            <div v-if="reservesState.getReserves().length > 0" ref="appContent" class="app-content pa-2">
+            <div v-if="currentTab === 'tuner'" class="app-content pa-2">
+                <TunerTimelineView></TunerTimelineView>
+            </div>
+            <div v-else-if="reservesState.getReserves().length > 0" ref="appContent" class="app-content pa-2">
                 <div v-bind:style="contentWrapStyle">
                     <ReserveItems :reserves="reservesState.getReserves()" :isEditMode.sync="isEditMode" v-on:selected="selectItem"></ReserveItems>
                 </div>
@@ -35,6 +44,8 @@ import Pagination from '@/components/pagination/Pagination.vue';
 import ReserveItems from '@/components/reserves/ReserveItems.vue';
 import ReserveMultipleDeletionDialog from '@/components/reserves/ReserveMultipleDeletionDialog.vue';
 import ReservesMainMenu from '@/components/reserves/ReservesMainMenu.vue';
+import TunerTimelineView from '@/components/reserves/TunerTimelineView.vue';
+import IReservesApiModel from '@/model/api/reserves/IReservesApiModel';
 import Snackbar from '@/components/snackbar/Snackbar.vue';
 import EditTitleBar from '@/components/titleBar/EditTitleBar.vue';
 import TitleBar from '@/components/titleBar/TitleBar.vue';
@@ -59,11 +70,22 @@ Component.registerHooks(['beforeRouteUpdate', 'beforeRouteLeave']);
         ReserveItems,
         Pagination,
         ReserveMultipleDeletionDialog,
+        TunerTimelineView,
     },
 })
 export default class Reserves extends Vue {
     public isEditMode: boolean = false;
     public isOpenMultiplueDeletionDialog: boolean = false;
+    public conflictCount: number = 0;
+    public currentTab: string = 'normal';
+
+    public tabs: Array<{ value: string; label: string }> = [
+        { value: 'normal', label: '予約' },
+        { value: 'conflict', label: '競合' },
+        { value: 'overlap', label: '重複' },
+        { value: 'skip', label: '除外' },
+        { value: 'tuner', label: 'チューナー' },
+    ];
 
     private isVisibilityHidden: boolean = false;
     private reservesState: IReservesState = container.get<IReservesState>('IReservesState');
@@ -72,8 +94,12 @@ export default class Reserves extends Vue {
     private scrollState: IScrollPositionState = container.get<IScrollPositionState>('IScrollPositionState');
     private snackbarState: ISnackbarState = container.get<ISnackbarState>('ISnackbarState');
     private socketIoModel: ISocketIOModel = container.get<ISocketIOModel>('ISocketIOModel');
+    private reservesApiModel: IReservesApiModel = container.get<IReservesApiModel>('IReservesApiModel');
     private onUpdateStatusCallback = (async (): Promise<void> => {
-        await this.reservesState.fetchData(this.createFetchDataOption());
+        await this.fetchConflictCount();
+        if (this.currentTab !== 'tuner') {
+            await this.reservesState.fetchData(this.createFetchDataOption());
+        }
     }).bind(this);
 
     get selectedTitle(): string {
@@ -91,6 +117,8 @@ export default class Reserves extends Vue {
                 return '重複';
             case 'skip':
                 return '除外';
+            case 'tuner':
+                return 'チューナー';
             case 'normal':
             default:
                 return '予約';
@@ -106,11 +134,38 @@ export default class Reserves extends Vue {
               };
     }
 
-    public created(): void {
+    public async created(): Promise<void> {
         this.settingValue = this.setting.getSavedValue();
+        this.currentTab = this.routeTabValue();
 
         // socket.io イベント
         this.socketIoModel.onUpdateState(this.onUpdateStatusCallback);
+
+        await this.fetchConflictCount();
+    }
+
+    private routeTabValue(): string {
+        const t = this.$route.query.type;
+        if (t === 'tuner' || t === 'normal' || t === 'conflict' || t === 'overlap' || t === 'skip') {
+            return t;
+        }
+        return 'normal';
+    }
+
+    private async fetchConflictCount(): Promise<void> {
+        try {
+            const cnts = await this.reservesApiModel.getCnts();
+            this.conflictCount = cnts.conflicts;
+        } catch (err) {
+            // 件数取得失敗は致命的でないので無視
+        }
+    }
+
+    public onTabChange(value: string): void {
+        if (value === this.routeTabValue()) return;
+        Util.move(this.$router, { path: '/reserves', query: { type: value } }).catch(err => {
+            console.error(err);
+        });
     }
 
     public beforeDestroy(): void {
@@ -165,15 +220,18 @@ export default class Reserves extends Vue {
 
     @Watch('$route', { immediate: true, deep: true })
     public onUrlChange(): void {
+        this.currentTab = this.routeTabValue();
         this.reservesState.clearDate();
         this.$nextTick(async () => {
-            await this.reservesState.fetchData(this.createFetchDataOption()).catch(err => {
-                this.snackbarState.open({
-                    color: 'error',
-                    text: '予約データ取得に失敗',
+            if (this.currentTab !== 'tuner') {
+                await this.reservesState.fetchData(this.createFetchDataOption()).catch(err => {
+                    this.snackbarState.open({
+                        color: 'error',
+                        text: '予約データ取得に失敗',
+                    });
+                    console.error(err);
                 });
-                console.error(err);
-            });
+            }
 
             this.isVisibilityHidden = false;
 

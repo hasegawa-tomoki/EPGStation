@@ -984,6 +984,66 @@ components:
                 overlaps:
                     $ref: '#/components/schemas/ReserveListItem'
 
+        TunerInfoItem:
+            description: チューナーの定義
+            type: object
+            required:
+                - index
+                - types
+            properties:
+                index:
+                    type: integer
+                types:
+                    type: array
+                    items:
+                        type: string
+
+        TunerAllocationItem:
+            description: 予約のチューナー割り当て情報
+            type: object
+            required:
+                - reserveId
+                - tunerIndex
+                - startAt
+                - endAt
+                - name
+                - channelId
+                - channelName
+                - channelType
+            properties:
+                reserveId:
+                    $ref: '#/components/schemas/ReserveId'
+                tunerIndex:
+                    type: integer
+                startAt:
+                    $ref: '#/components/schemas/UnixtimeMS'
+                endAt:
+                    $ref: '#/components/schemas/UnixtimeMS'
+                name:
+                    type: string
+                channelId:
+                    $ref: '#/components/schemas/ChannelId'
+                channelName:
+                    type: string
+                channelType:
+                    type: string
+
+        TunerAllocations:
+            description: チューナー割り当て一覧 (使用状況可視化用)
+            type: object
+            required:
+                - tuners
+                - allocations
+            properties:
+                tuners:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/TunerInfoItem'
+                allocations:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/TunerAllocationItem'
+
         ReserveCnts:
             description: 予約カウント
             type: object
