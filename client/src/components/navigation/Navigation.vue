@@ -30,12 +30,7 @@
                     <v-list-item-content>
                         <v-list-item-title>
                             {{ item.title }}
-                            <v-badge
-                                v-if="typeof item.badge === 'number' && item.badge > 0"
-                                :color="item.badgeColor || 'red'"
-                                :content="item.badge"
-                                inline
-                            ></v-badge>
+                            <v-badge v-if="typeof item.badge === 'number' && item.badge > 0" :color="item.badgeColor || 'red'" :content="item.badge" inline></v-badge>
                         </v-list-item-title>
                     </v-list-item-content>
                 </v-list-item>

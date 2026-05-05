@@ -3,14 +3,18 @@
         <div v-if="loading" class="loading-area">
             <v-progress-circular indeterminate color="primary"></v-progress-circular>
         </div>
-        <div v-else-if="data === null || data.tuners.length === 0" class="empty-area">
-            チューナー情報を取得できません
-        </div>
+        <div v-else-if="data === null || data.tuners.length === 0" class="empty-area">チューナー情報を取得できません</div>
         <div v-else class="timeline-wrap">
             <div class="time-axis">
                 <div class="header axis-header">時刻</div>
                 <div class="track" :style="{ height: trackHeightPx + 'px' }">
-                    <div v-for="(slot, i) in timeSlots" :key="`s${i}`" class="time-tick" :class="{ 'time-tick--hour': slot.isHour }" :style="{ top: i * rowPx + 'px', height: rowPx + 'px' }">
+                    <div
+                        v-for="(slot, i) in timeSlots"
+                        :key="`s${i}`"
+                        class="time-tick"
+                        :class="{ 'time-tick--hour': slot.isHour }"
+                        :style="{ top: i * rowPx + 'px', height: rowPx + 'px' }"
+                    >
                         {{ slot.label }}
                     </div>
                 </div>
