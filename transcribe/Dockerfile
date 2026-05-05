@@ -5,7 +5,7 @@ ENV PYTHONUNBUFFERED=1 \
     HF_HOME=/cache/huggingface
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ffmpeg curl libsndfile1 \
+    && apt-get install -y --no-install-recommends ffmpeg curl libsndfile1 git \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
