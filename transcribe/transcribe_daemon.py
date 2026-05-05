@@ -116,10 +116,11 @@ def _denoise_and_resample_to_16k(audio_48k: np.ndarray) -> np.ndarray:
 
 
 def _demucs_extract_vocals_16k(rec_path: str, rec_id: str) -> np.ndarray:
-    """ffmpeg で 44.1kHz stereo を抽出 → Demucs で vocals stem 取り出し → mono 化 → 16kHz リサンプル。"""
+    """ffmpeg で 44.1kHz stereo を抽出 → Demucs apply_model で vocals stem を抽出 → mono 16kHz。"""
     import torch
     import torchaudio
     import torchaudio.functional as taF
+    from demucs.apply import apply_model
 
     wav_path = TMP_DIR / f"transcribe-{rec_id}-44k.wav"
     subprocess.run(
@@ -137,8 +138,19 @@ def _demucs_extract_vocals_16k(rec_path: str, rec_id: str) -> np.ndarray:
     except FileNotFoundError:
         pass
 
-    _origin, separated = DEMUCS_SEPARATOR.separate_tensor(wav, sr)  # type: ignore[name-defined]
-    vocals = separated["vocals"]  # (channels, samples)
+    # apply_model expects (batch, channels, samples)
+    sources = apply_model(  # type: ignore[name-defined]
+        DEMUCS_MODEL_OBJ,
+        wav.unsqueeze(0),
+        device="cpu",
+        segment=DEMUCS_SEGMENT_S,
+        split=True,
+        overlap=0.25,
+        progress=False,
+    )
+    # sources: (1, n_sources, channels, samples)
+    vocals_idx = DEMUCS_MODEL_OBJ.sources.index("vocals")  # type: ignore[name-defined]
+    vocals = sources[0, vocals_idx]  # (channels, samples)
     if vocals.dim() == 2:
         vocals = vocals.mean(dim=0)
     vocals_16k = taF.resample(vocals, 44100, 16000).numpy()
@@ -163,7 +175,7 @@ def _prepare_audio(req: "TranscribeRequest", rec_id: str) -> tuple[np.ndarray, i
         audio_16k = _denoise_and_resample_to_16k(audio_48k)
         denoise_sec = time.time() - t_d0
         return audio_16k, 16000, denoise_sec
-    if DENOISE_BACKEND == "demucs" and DEMUCS_SEPARATOR is not None:
+    if DENOISE_BACKEND == "demucs" and DEMUCS_MODEL_OBJ is not None:
         t_d0 = time.time()
         audio_16k = _demucs_extract_vocals_16k(req.recPath, rec_id)
         denoise_sec = time.time() - t_d0
@@ -257,7 +269,7 @@ log.info(f"whisper model ready in {time.time() - _t0:.1f}s")
 DF_MODEL = None
 DF_STATE = None
 DF_ENHANCE = None
-DEMUCS_SEPARATOR = None
+DEMUCS_MODEL_OBJ = None
 if DENOISE_BACKEND == "deepfilternet":
     log.info("loading DeepFilterNet 3 for denoise/BGM suppression")
     _t1 = time.time()
@@ -268,9 +280,10 @@ if DENOISE_BACKEND == "deepfilternet":
 elif DENOISE_BACKEND == "demucs":
     log.info(f"loading Demucs ({DEMUCS_MODEL}) for vocals separation")
     _t1 = time.time()
-    from demucs.api import Separator as _DemucsSeparator
-    DEMUCS_SEPARATOR = _DemucsSeparator(model=DEMUCS_MODEL, device="cpu", segment=DEMUCS_SEGMENT_S)
-    log.info(f"Demucs ready in {time.time() - _t1:.1f}s (segment={DEMUCS_SEGMENT_S}s)")
+    from demucs.pretrained import get_model as _demucs_get_model
+    DEMUCS_MODEL_OBJ = _demucs_get_model(DEMUCS_MODEL)
+    DEMUCS_MODEL_OBJ.eval()
+    log.info(f"Demucs ready in {time.time() - _t1:.1f}s (segment={DEMUCS_SEGMENT_S}s, sources={DEMUCS_MODEL_OBJ.sources})")
 elif DENOISE_BACKEND != "none":
     log.warning(f"unknown DENOISE_BACKEND={DENOISE_BACKEND}, falling back to none")
 
