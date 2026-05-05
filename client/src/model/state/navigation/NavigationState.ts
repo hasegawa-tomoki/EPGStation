@@ -133,26 +133,6 @@ export default class NavigationState implements INavigationState {
             badgeColor: 'red',
         });
         newItems.push({
-            icon: 'mdi-clock-outline',
-            title: '競合',
-            herf: {
-                path: '/reserves',
-                query: {
-                    type: 'conflict',
-                },
-            },
-        });
-        newItems.push({
-            icon: 'mdi-clock-outline',
-            title: '重複',
-            herf: {
-                path: '/reserves',
-                query: {
-                    type: 'overlap',
-                },
-            },
-        });
-        newItems.push({
             icon: 'mdi-magnify',
             title: '検索',
             herf: {
