@@ -19,10 +19,6 @@ LANGUAGE = os.environ.get("WHISPER_LANGUAGE", "ja")
 BEAM_SIZE = int(os.environ.get("WHISPER_BEAM_SIZE", "5"))
 OUTPUT_DIR = Path(os.environ.get("TRANSCRIPT_OUTPUT_DIR", "/app/data/transcripts"))
 TMP_DIR = Path(os.environ.get("TRANSCRIBE_TMP_DIR", "/tmp"))
-DENOISE_BACKEND = os.environ.get("DENOISE_BACKEND", "none").lower()  # none | deepfilternet | demucs
-DENOISE_CHUNK_S = int(os.environ.get("DENOISE_CHUNK_S", "30"))  # DF enhance chunk size (sec) for long audio
-DEMUCS_MODEL = os.environ.get("DEMUCS_MODEL", "htdemucs")
-DEMUCS_SEGMENT_S = float(os.environ.get("DEMUCS_SEGMENT_S", "7.8"))  # HT Demucs 最大 segment 長
 
 logging.basicConfig(
     level=logging.INFO,
@@ -49,12 +45,12 @@ def _update_status(rec_id: str, **kwargs: Any) -> None:
         job_status.setdefault(rec_id, {}).update(kwargs)
 
 
-def _extract_wav(rec_path: str, out_wav: str, sample_rate: int = 16000) -> None:
+def _extract_wav(rec_path: str, out_wav: str) -> None:
     subprocess.run(
         [
             "ffmpeg", "-y", "-loglevel", "error",
             "-i", rec_path,
-            "-vn", "-ar", str(sample_rate), "-ac", "1", "-c:a", "pcm_s16le",
+            "-vn", "-ar", "16000", "-ac", "1", "-c:a", "pcm_s16le",
             out_wav,
         ],
         check=True,
@@ -88,118 +84,19 @@ def _build_initial_prompt(req: "TranscribeRequest") -> Optional[str]:
     return prompt
 
 
-def _denoise_and_resample_to_16k(audio_48k: np.ndarray) -> np.ndarray:
-    """DeepFilterNet 3 で BGM/ノイズを抑制し、whisper 用に 16kHz にダウンサンプルして返す。
-
-    長尺音声 (45-60 分の TS) を一括で enhance すると intermediate tensor で 12GB 超えて
-    OOM Kill される。DENOISE_CHUNK_S 秒ずつ chunk 処理して連結する。
-    """
-    import torch
-    import torchaudio.functional as taF
-
-    chunk_samples = 48000 * DENOISE_CHUNK_S
-    enhanced_chunks: list[torch.Tensor] = []
-    for start in range(0, len(audio_48k), chunk_samples):
-        chunk = audio_48k[start:start + chunk_samples]
-        chunk_t = torch.from_numpy(chunk).float().unsqueeze(0)
-        enhanced = DF_ENHANCE(DF_MODEL, DF_STATE, chunk_t)  # type: ignore[name-defined]
-        if isinstance(enhanced, torch.Tensor):
-            t = enhanced
-        else:
-            t = torch.from_numpy(enhanced)
-        if t.dim() == 2:
-            t = t.squeeze(0)
-        enhanced_chunks.append(t.detach())
-    enhanced_full = torch.cat(enhanced_chunks) if len(enhanced_chunks) > 1 else enhanced_chunks[0]
-    audio_16k = taF.resample(enhanced_full, 48000, 16000).numpy()
-    return audio_16k.astype(np.float32, copy=False)
-
-
-def _demucs_extract_vocals_16k(rec_path: str, rec_id: str) -> np.ndarray:
-    """ffmpeg で 44.1kHz stereo を抽出 → Demucs apply_model で vocals stem を抽出 → mono 16kHz。"""
-    import torch
-    import torchaudio
-    import torchaudio.functional as taF
-    from demucs.apply import apply_model
-
-    wav_path = TMP_DIR / f"transcribe-{rec_id}-44k.wav"
-    subprocess.run(
-        [
-            "ffmpeg", "-y", "-loglevel", "error",
-            "-i", rec_path,
-            "-vn", "-ar", "44100", "-ac", "2", "-c:a", "pcm_s16le",
-            str(wav_path),
-        ],
-        check=True,
-    )
-    wav, sr = torchaudio.load(str(wav_path))  # (channels, samples)
-    try:
-        wav_path.unlink()
-    except FileNotFoundError:
-        pass
-
-    # apply_model expects (batch, channels, samples)
-    sources = apply_model(  # type: ignore[name-defined]
-        DEMUCS_MODEL_OBJ,
-        wav.unsqueeze(0),
-        device="cpu",
-        segment=DEMUCS_SEGMENT_S,
-        split=True,
-        overlap=0.25,
-        progress=False,
-    )
-    # sources: (1, n_sources, channels, samples)
-    vocals_idx = DEMUCS_MODEL_OBJ.sources.index("vocals")  # type: ignore[name-defined]
-    vocals = sources[0, vocals_idx]  # (channels, samples)
-    if vocals.dim() == 2:
-        vocals = vocals.mean(dim=0)
-    vocals_16k = taF.resample(vocals, 44100, 16000).numpy()
-    return vocals_16k.astype(np.float32, copy=False)
-
-
-def _prepare_audio(req: "TranscribeRequest", rec_id: str) -> tuple[np.ndarray, int, float]:
-    """rec_path から audio (16kHz mono float32) を取得。
-    - DENOISE_BACKEND=deepfilternet: 48kHz 抽出 → DF enhance → 16kHz リサンプル
-    - DENOISE_BACKEND=demucs: 44.1kHz stereo 抽出 → Demucs で vocals stem → 16kHz リサンプル
-    - それ以外: 16kHz mono 抽出 (denoise なし)
-    """
-    if DENOISE_BACKEND == "deepfilternet" and DF_MODEL is not None:
-        wav_path = TMP_DIR / f"transcribe-{rec_id}-48k.wav"
-        _extract_wav(req.recPath, str(wav_path), sample_rate=48000)
-        audio_48k, sr_in = _load_audio(str(wav_path))
-        try:
-            wav_path.unlink()
-        except FileNotFoundError:
-            pass
-        t_d0 = time.time()
-        audio_16k = _denoise_and_resample_to_16k(audio_48k)
-        denoise_sec = time.time() - t_d0
-        return audio_16k, 16000, denoise_sec
-    if DENOISE_BACKEND == "demucs" and DEMUCS_MODEL_OBJ is not None:
-        t_d0 = time.time()
-        audio_16k = _demucs_extract_vocals_16k(req.recPath, rec_id)
-        denoise_sec = time.time() - t_d0
-        return audio_16k, 16000, denoise_sec
-    wav_path = TMP_DIR / f"transcribe-{rec_id}.wav"
-    _extract_wav(req.recPath, str(wav_path), sample_rate=16000)
-    audio, sr = _load_audio(str(wav_path))
-    try:
-        wav_path.unlink()
-    except FileNotFoundError:
-        pass
-    return audio, sr, 0.0
-
-
 def _transcribe_one(req: "TranscribeRequest") -> None:
     rec_id = str(req.recordedId)
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     TMP_DIR.mkdir(parents=True, exist_ok=True)
 
+    wav_path = TMP_DIR / f"transcribe-{rec_id}.wav"
     out_txt = OUTPUT_DIR / f"{rec_id}.txt"
 
     _update_status(rec_id, state="extracting", recPath=req.recPath, startedAt=time.time())
     t0 = time.time()
-    audio, sr, denoise_sec = _prepare_audio(req, rec_id)
+    _extract_wav(req.recPath, str(wav_path))
+
+    audio, sr = _load_audio(str(wav_path))
     duration = len(audio) / sr
 
     initial_prompt = _build_initial_prompt(req)
@@ -207,8 +104,6 @@ def _transcribe_one(req: "TranscribeRequest") -> None:
         rec_id,
         state="transcribing",
         durationSec=round(duration, 1),
-        denoiseSec=round(denoise_sec, 1) if denoise_sec > 0 else None,
-        denoiseBackend=DENOISE_BACKEND if DENOISE_BACKEND != "none" else None,
         promptLen=len(initial_prompt) if initial_prompt else 0,
     )
     t1 = time.time()
@@ -229,6 +124,10 @@ def _transcribe_one(req: "TranscribeRequest") -> None:
     elapsed = time.time() - t1
 
     out_txt.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    try:
+        wav_path.unlink()
+    except FileNotFoundError:
+        pass
 
     _update_status(
         rec_id,
@@ -240,8 +139,8 @@ def _transcribe_one(req: "TranscribeRequest") -> None:
         finishedAt=time.time(),
     )
     log.info(
-        f"transcribed {rec_id}: audio={duration:.1f}s denoise={denoise_sec:.1f}s "
-        f"transcribe={elapsed:.1f}s speed={duration / elapsed:.2f}x realtime"
+        f"transcribed {rec_id}: audio={duration:.1f}s elapsed={elapsed:.1f}s "
+        f"speed={duration / elapsed:.2f}x realtime"
     )
 
 
@@ -264,28 +163,7 @@ def _worker() -> None:
 log.info(f"loading whisper model: {MODEL_NAME} (compute={COMPUTE_TYPE})")
 _t0 = time.time()
 MODEL = WhisperModel(MODEL_NAME, device="cpu", compute_type=COMPUTE_TYPE)
-log.info(f"whisper model ready in {time.time() - _t0:.1f}s")
-
-DF_MODEL = None
-DF_STATE = None
-DF_ENHANCE = None
-DEMUCS_MODEL_OBJ = None
-if DENOISE_BACKEND == "deepfilternet":
-    log.info("loading DeepFilterNet 3 for denoise/BGM suppression")
-    _t1 = time.time()
-    from df import enhance as _df_enhance, init_df as _df_init
-    DF_MODEL, DF_STATE, _ = _df_init()
-    DF_ENHANCE = _df_enhance
-    log.info(f"DeepFilterNet ready in {time.time() - _t1:.1f}s (sr={DF_STATE.sr()})")
-elif DENOISE_BACKEND == "demucs":
-    log.info(f"loading Demucs ({DEMUCS_MODEL}) for vocals separation")
-    _t1 = time.time()
-    from demucs.pretrained import get_model as _demucs_get_model
-    DEMUCS_MODEL_OBJ = _demucs_get_model(DEMUCS_MODEL)
-    DEMUCS_MODEL_OBJ.eval()
-    log.info(f"Demucs ready in {time.time() - _t1:.1f}s (segment={DEMUCS_SEGMENT_S}s, sources={DEMUCS_MODEL_OBJ.sources})")
-elif DENOISE_BACKEND != "none":
-    log.warning(f"unknown DENOISE_BACKEND={DENOISE_BACKEND}, falling back to none")
+log.info(f"model ready in {time.time() - _t0:.1f}s")
 
 threading.Thread(target=_worker, daemon=True).start()
 
@@ -317,9 +195,4 @@ def list_jobs() -> dict[str, Any]:
 
 @app.get("/healthz")
 def healthz() -> dict[str, Any]:
-    return {
-        "ok": True,
-        "queueSize": job_queue.qsize(),
-        "model": MODEL_NAME,
-        "denoise": DENOISE_BACKEND,
-    }
+    return {"ok": True, "queueSize": job_queue.qsize(), "model": MODEL_NAME}
