@@ -127,7 +127,8 @@ export default class TunerTimelineView extends Vue {
     get dayBreakSlots(): Array<{ index: number; dayLabel: string; topPx: number }> {
         const result: Array<{ index: number; dayLabel: string; topPx: number }> = [];
         this.timeSlots.forEach((s, i) => {
-            if (s.isDayBreak) result.push({ index: i, dayLabel: s.dayLabel, topPx: s.headerOffsetBeforePx });
+            // band は対象 slot の topPx から DAY_HEADER_PX 分だけ上に置く (slot 本体と重ならない位置)
+            if (s.isDayBreak) result.push({ index: i, dayLabel: s.dayLabel, topPx: s.topPx - DAY_HEADER_PX });
         });
         return result;
     }
