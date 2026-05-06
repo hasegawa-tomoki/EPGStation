@@ -38,7 +38,7 @@
                                 <span v-if="block.isRecording" class="rec-badge">録画中</span>
                                 <span>{{ block.timeRange }}</span>
                             </div>
-                            <div class="block-name">{{ block.name }}</div>
+                            <div class="block-name block-name--clickable" v-on:click="onClickName(block.reserveId)">{{ block.name }}</div>
                             <div class="block-channel">{{ block.channelName }}</div>
                         </div>
                     </div>
@@ -55,13 +55,16 @@
                 </div>
             </div>
         </div>
+        <ReserveDialog :isOpen.sync="isOpenDialog" :reserve="dialogReserve"></ReserveDialog>
     </div>
 </template>
 
 <script lang="ts">
+import ReserveDialog from '@/components/reserves/ReserveDialog.vue';
 import IReservesApiModel from '@/model/api/reserves/IReservesApiModel';
 import container from '@/model/ModelContainer';
 import ISocketIOModel from '@/model/socketio/ISocketIOModel';
+import IReserveStateUtil, { ReserveStateData } from '@/model/state/reserve/IReserveStateUtil';
 import ISnackbarState from '@/model/state/snackbar/ISnackbarState';
 import { ISettingStorageModel } from '@/model/storage/setting/ISettingStorageModel';
 import { Component, Vue } from 'vue-property-decorator';
@@ -91,8 +94,12 @@ interface Block {
     isRecording: boolean;
 }
 
-@Component({})
+@Component({
+    components: { ReserveDialog },
+})
 export default class TunerTimelineView extends Vue {
+    public isOpenDialog: boolean = false;
+    public dialogReserve: ReserveStateData | null = null;
     public loading: boolean = true;
     public data: apid.TunerAllocations | null = null;
     public timeSlots: TimeSlot[] = [];
@@ -102,6 +109,7 @@ export default class TunerTimelineView extends Vue {
     private totalHeaderPx: number = 0;
 
     private reservesApiModel: IReservesApiModel = container.get<IReservesApiModel>('IReservesApiModel');
+    private reserveStateUtil: IReserveStateUtil = container.get<IReserveStateUtil>('IReserveStateUtil');
     private setting: ISettingStorageModel = container.get<ISettingStorageModel>('ISettingStorageModel');
     private socketIoModel: ISocketIOModel = container.get<ISocketIOModel>('ISocketIOModel');
     private snackbarState: ISnackbarState = container.get<ISnackbarState>('ISnackbarState');
@@ -213,6 +221,21 @@ export default class TunerTimelineView extends Vue {
             buckets[a.tunerIndex].push(block);
         }
         this.blocksByTuner = buckets;
+    }
+
+    /** ブロックの番組名クリック時: API から ReserveItem を取り直して ReserveDialog を表示 */
+    public async onClickName(reserveId: number): Promise<void> {
+        try {
+            const isHalf = this.setting.getSavedValue().isHalfWidthDisplayed;
+            const item = await this.reservesApiModel.get(reserveId, isHalf);
+            const stateDatas = this.reserveStateUtil.convertReserveItemsToStateDatas([item], isHalf);
+            if (stateDatas.length === 0) return;
+            this.dialogReserve = stateDatas[0];
+            this.isOpenDialog = true;
+        } catch (err) {
+            this.snackbarState.open({ color: 'error', text: '予約情報の取得に失敗' });
+            console.error(err);
+        }
     }
 
     /** 任意の時刻 (epoch min) をトラック上の top px に変換。slot 内は分数比例で配置する。 */
@@ -419,6 +442,14 @@ export default class TunerTimelineView extends Vue {
         white-space: nowrap
         overflow: hidden
         text-overflow: ellipsis
+
+        &--clickable
+            cursor: pointer
+            text-decoration: underline
+            text-decoration-thickness: 1px
+            text-decoration-color: rgba(0, 0, 0, 0.25)
+            &:hover
+                text-decoration-color: currentColor
 
     .block-channel
         opacity: 0.75
