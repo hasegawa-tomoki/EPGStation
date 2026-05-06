@@ -253,9 +253,13 @@ export default class TunerTimelineView extends Vue {
         return slot.topPx + (intra / SLOT_MIN) * ROW_PX;
     }
 
-    /** "hh:mm-hh:mm (xx分後 / x時間x分後)" — 日付は別の day-header-band 行で出すのでここでは出さない */
+    /** "hh:mm-hh:mm (xx分後 / x時間x分後)" — 録画中は (あと xx 分) を表示 */
     private formatTimeRange(startAt: number, endAt: number, nowMs: number): string {
         const head = `${this.fmtHM(startAt)}-${this.fmtHM(endAt)}`;
+        if (startAt <= nowMs && nowMs < endAt) {
+            const remainMin = Math.max(0, Math.ceil((endAt - nowMs) / 60000));
+            return `${head} (あと${remainMin}分)`;
+        }
         const diffMin = Math.floor((startAt - nowMs) / 60000);
         if (diffMin <= 0) return head;
         if (diffMin < 60) return `${head} (${diffMin}分後)`;
