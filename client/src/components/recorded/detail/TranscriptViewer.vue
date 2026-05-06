@@ -100,6 +100,12 @@ export default class TranscriptViewer extends Vue {
         e.preventDefault();
         e.stopPropagation();
         this.currentStartAt = startAt;
+        // videoFiles が空 (=再生中画面など) のときは menu を出さず直接 seek を emit
+        if (this.videoFiles.length === 0) {
+            this.$emit('seek', startAt);
+            this.$emit('play', null, startAt);
+            return;
+        }
         this.menuX = e.clientX;
         this.menuY = e.clientY;
         this.isMenuOpen = false;
