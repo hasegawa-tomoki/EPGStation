@@ -98,6 +98,7 @@ export default class ReserveMenu extends Vue {
                     text: `${this.reserveItem.name} 除外解除失敗`,
                 });
             }
+            this.$emit('action');
         } else if (this.reserveItem.isOverlap === true) {
             // remove overlap
             try {
@@ -112,8 +113,10 @@ export default class ReserveMenu extends Vue {
                     text: `${this.reserveItem.name} 重複解除失敗`,
                 });
             }
+            this.$emit('action');
         } else {
             // cancel reserve
+            this.$emit('action');
             this.isOpenDeleteDialog = true;
         }
     }
@@ -123,6 +126,7 @@ export default class ReserveMenu extends Vue {
             return;
         }
 
+        this.$emit('action');
         Util.move(this.$router, {
             path: '/recorded',
             query: {
@@ -132,6 +136,7 @@ export default class ReserveMenu extends Vue {
     }
 
     public async goToEdit(): Promise<void> {
+        this.$emit('action');
         if (typeof this.reserveItem.ruleId === 'undefined') {
             await Util.move(this.$router, {
                 path: '/reserves/manual',

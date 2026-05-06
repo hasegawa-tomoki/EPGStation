@@ -17,7 +17,9 @@
                     </div>
                 </v-card-text>
                 <div class="pa-2">
-                    <div class="d-flex justify-end">
+                    <div class="d-flex align-center">
+                        <ReserveMenu :reserveItem="reserve.reserveItem" v-on:action="dialogModel = false"></ReserveMenu>
+                        <v-spacer></v-spacer>
                         <v-btn color="blue darken-1" text v-on:click="dialogModel = false">閉じる</v-btn>
                     </div>
                 </div>
@@ -27,6 +29,7 @@
 </template>
 
 <script lang="ts">
+import ReserveMenu from '@/components/reserves/ReserveMenu.vue';
 import IChannelModel from '@/model/channels/IChannelModel';
 import container from '@/model/ModelContainer';
 import { ReserveStateData } from '@/model/state/reserve/IReserveStateUtil';
@@ -35,7 +38,9 @@ import DateUtil from '@/util/DateUtil';
 import Util from '@/util/Util';
 import { Component, Prop, Vue, Watch } from 'vue-property-decorator';
 
-@Component({})
+@Component({
+    components: { ReserveMenu },
+})
 export default class ReserveDialog extends Vue {
     @Prop({ required: true })
     public isOpen!: boolean;
