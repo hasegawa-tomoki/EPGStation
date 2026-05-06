@@ -15,7 +15,8 @@
         </TitleBar>
         <v-tabs v-model="currentTab" v-on:change="onTabChange" show-arrows class="reserves-tabs">
             <v-tab v-for="tab in tabs" :key="tab.value" :href="`#${tab.value}`">
-                {{ tab.label }}
+                <span>{{ tab.label }}</span>
+                <span v-if="tab.count !== null" class="tab-count">({{ tab.count }})</span>
                 <v-badge v-if="tab.value === 'conflict' && conflictCount > 0" color="red" :content="conflictCount" inline></v-badge>
             </v-tab>
         </v-tabs>
@@ -78,14 +79,22 @@ export default class Reserves extends Vue {
     public isOpenMultiplueDeletionDialog: boolean = false;
     public conflictCount: number = 0;
     public currentTab: string = 'normal';
+    public cnts: { normal: number; conflicts: number; overlaps: number; skips: number } = {
+        normal: 0,
+        conflicts: 0,
+        overlaps: 0,
+        skips: 0,
+    };
 
-    public tabs: Array<{ value: string; label: string }> = [
-        { value: 'normal', label: '予約' },
-        { value: 'conflict', label: '競合' },
-        { value: 'overlap', label: '重複' },
-        { value: 'skip', label: '除外' },
-        { value: 'tuner', label: 'チューナー' },
-    ];
+    get tabs(): Array<{ value: string; label: string; count: number | null }> {
+        return [
+            { value: 'normal', label: '予約', count: this.cnts.normal },
+            { value: 'conflict', label: '競合', count: this.cnts.conflicts },
+            { value: 'overlap', label: '重複', count: this.cnts.overlaps },
+            { value: 'skip', label: '除外', count: this.cnts.skips },
+            { value: 'tuner', label: '予約推移', count: null },
+        ];
+    }
 
     private isVisibilityHidden: boolean = false;
     private reservesState: IReservesState = container.get<IReservesState>('IReservesState');
@@ -118,7 +127,7 @@ export default class Reserves extends Vue {
             case 'skip':
                 return '除外';
             case 'tuner':
-                return 'チューナー';
+                return '予約推移';
             case 'normal':
             default:
                 return '予約';
@@ -156,6 +165,7 @@ export default class Reserves extends Vue {
         try {
             const cnts = await this.reservesApiModel.getCnts();
             this.conflictCount = cnts.conflicts;
+            this.cnts = cnts;
         } catch (err) {
             // 件数取得失敗は致命的でないので無視
         }
@@ -260,3 +270,11 @@ export default class Reserves extends Vue {
     }
 }
 </script>
+
+<style lang="sass" scoped>
+.reserves-tabs
+    .tab-count
+        margin-left: 4px
+        font-size: 12px
+        opacity: 0.7
+</style>

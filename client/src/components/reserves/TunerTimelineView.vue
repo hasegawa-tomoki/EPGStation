@@ -12,10 +12,11 @@
                         v-for="(slot, i) in timeSlots"
                         :key="`s${i}`"
                         class="time-tick"
-                        :class="{ 'time-tick--hour': slot.isHour }"
+                        :class="{ 'time-tick--hour': slot.isHour, 'time-tick--day': slot.isDayBreak }"
                         :style="{ top: i * rowPx + 'px', height: rowPx + 'px' }"
                     >
-                        {{ slot.label }}
+                        <div v-if="slot.isDayBreak" class="day-label">{{ slot.dayLabel }}</div>
+                        <div class="hm-label">{{ slot.label }}</div>
                     </div>
                 </div>
             </div>
@@ -26,6 +27,12 @@
                 </div>
                 <div class="track" :style="{ height: trackHeightPx + 'px' }">
                     <div
+                        v-for="db in dayBreakSlots"
+                        :key="`d${tuner.index}-${db.index}`"
+                        class="day-break-line"
+                        :style="{ top: db.index * rowPx + 'px' }"
+                    ></div>
+                    <div
                         v-for="block in blocksByTuner[tuner.index] || []"
                         :key="`b${block.reserveId}`"
                         class="reserve-block"
@@ -33,7 +40,10 @@
                         :style="{ top: block.topPx + 'px', height: block.heightPx + 'px' }"
                         :title="`${block.name}\n${block.channelName}\n${block.timeRange}`"
                     >
-                        <div class="block-time">{{ block.timeRange }}</div>
+                        <div class="block-time">
+                            <span v-if="block.isRecording" class="rec-badge">録画中</span>
+                            <span>{{ block.timeRange }}</span>
+                        </div>
                         <div class="block-name">{{ block.name }}</div>
                         <div class="block-channel">{{ block.channelName }}</div>
                     </div>
@@ -53,11 +63,14 @@ import { Component, Vue } from 'vue-property-decorator';
 import * as apid from '../../../../api';
 
 const SLOT_MIN = 30; // 30 分刻み
-const ROW_PX = 24; // 30 分 = 24px
+const ROW_PX = 30; // 30 分 = 30px
+const DAY_LABELS = ['日', '月', '火', '水', '木', '金', '土'];
 
 interface TimeSlot {
     label: string;
     isHour: boolean;
+    isDayBreak: boolean;
+    dayLabel: string;
 }
 interface Block {
     reserveId: number;
@@ -67,6 +80,7 @@ interface Block {
     timeRange: string;
     topPx: number;
     heightPx: number;
+    isRecording: boolean;
 }
 
 @Component({})
@@ -100,6 +114,14 @@ export default class TunerTimelineView extends Vue {
         return this.timeSlots.length * ROW_PX;
     }
 
+    get dayBreakSlots(): Array<{ index: number }> {
+        const result: Array<{ index: number }> = [];
+        this.timeSlots.forEach((s, i) => {
+            if (s.isDayBreak) result.push({ index: i });
+        });
+        return result;
+    }
+
     private async fetch(): Promise<void> {
         try {
             const isHalf = this.setting.getSavedValue().isHalfWidthDisplayed;
@@ -128,19 +150,25 @@ export default class TunerTimelineView extends Vue {
         const slotsCount = Math.max(1, (endEpochMin - this.startEpochMin) / SLOT_MIN);
 
         const slots: TimeSlot[] = [];
+        let lastDayKey = '';
         for (let i = 0; i < slotsCount; i++) {
             const m = this.startEpochMin + i * SLOT_MIN;
             const d = new Date(m * 60000);
             const hh = d.getHours();
             const mm = d.getMinutes();
-            const isHour = mm === 0;
+            const dayKey = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+            const isDayBreak = dayKey !== lastDayKey;
+            lastDayKey = dayKey;
             slots.push({
-                label: isHour ? `${this.zeroPad(d.getMonth() + 1)}/${this.zeroPad(d.getDate())} ${this.zeroPad(hh)}:00` : `${this.zeroPad(hh)}:${this.zeroPad(mm)}`,
-                isHour,
+                label: `${this.zeroPad(hh)}:${this.zeroPad(mm)}`,
+                isHour: mm === 0,
+                isDayBreak,
+                dayLabel: this.fmtFullDate(d),
             });
         }
         this.timeSlots = slots;
 
+        const nowMs = now.getTime();
         const buckets: { [key: number]: Block[] } = {};
         for (const a of data.allocations) {
             const startMin = a.startAt / 60000;
@@ -149,19 +177,36 @@ export default class TunerTimelineView extends Vue {
             const clampedStart = Math.max(startMin, this.startEpochMin);
             const topMin = clampedStart - this.startEpochMin;
             const durationMin = Math.max(SLOT_MIN / 2, endMin - clampedStart);
+            const isRecording = a.startAt <= nowMs && nowMs < a.endAt;
             const block: Block = {
                 reserveId: a.reserveId,
                 name: a.name,
                 channelName: a.channelName,
                 channelType: a.channelType,
-                timeRange: `${this.fmtHM(a.startAt)}-${this.fmtHM(a.endAt)}`,
+                timeRange: this.formatTimeRange(a.startAt, a.endAt, nowMs),
                 topPx: (topMin / SLOT_MIN) * ROW_PX,
                 heightPx: (durationMin / SLOT_MIN) * ROW_PX,
+                isRecording,
             };
             if (typeof buckets[a.tunerIndex] === 'undefined') buckets[a.tunerIndex] = [];
             buckets[a.tunerIndex].push(block);
         }
         this.blocksByTuner = buckets;
+    }
+
+    /** "yyyy/mm/dd (曜) hh:mm-hh:mm (xx分後 / x時間x分後)" */
+    private formatTimeRange(startAt: number, endAt: number, nowMs: number): string {
+        const head = `${this.fmtFullDate(new Date(startAt))} ${this.fmtHM(startAt)}-${this.fmtHM(endAt)}`;
+        const diffMin = Math.floor((startAt - nowMs) / 60000);
+        if (diffMin <= 0) return head;
+        if (diffMin < 60) return `${head} (${diffMin}分後)`;
+        const h = Math.floor(diffMin / 60);
+        const m = diffMin % 60;
+        return m === 0 ? `${head} (${h}時間後)` : `${head} (${h}時間${m}分後)`;
+    }
+
+    private fmtFullDate(d: Date): string {
+        return `${d.getFullYear()}/${this.zeroPad(d.getMonth() + 1)}/${this.zeroPad(d.getDate())}（${DAY_LABELS[d.getDay()]}）`;
     }
 
     private zeroPad(n: number): string {
@@ -185,6 +230,7 @@ export default class TunerTimelineView extends Vue {
     justify-content: center
     min-height: 200px
     opacity: 0.6
+    font-size: 14px
 
 .timeline-wrap
     display: flex
@@ -194,22 +240,22 @@ export default class TunerTimelineView extends Vue {
     overflow-x: auto
 
 .time-axis
-    flex: 0 0 70px
+    flex: 0 0 130px
     border-right: 1px solid rgba(0, 0, 0, 0.12)
     background-color: rgba(0, 0, 0, 0.04)
 
 .tuner-column
-    flex: 1 0 160px
-    min-width: 160px
+    flex: 1 0 200px
+    min-width: 200px
     border-right: 1px solid rgba(0, 0, 0, 0.06)
 
 .header
-    height: 40px
+    height: 44px
     display: flex
     flex-direction: column
     align-items: center
     justify-content: center
-    font-size: 12px
+    font-size: 14px
     font-weight: 600
     background-color: rgba(0, 0, 0, 0.06)
     border-bottom: 1px solid rgba(0, 0, 0, 0.12)
@@ -220,7 +266,7 @@ export default class TunerTimelineView extends Vue {
 .tuner-types
     font-weight: 400
     opacity: 0.7
-    font-size: 10px
+    font-size: 12px
 
 .track
     position: relative
@@ -229,17 +275,37 @@ export default class TunerTimelineView extends Vue {
     position: absolute
     left: 0
     right: 0
-    font-size: 10px
-    color: rgba(0, 0, 0, 0.55)
-    padding: 2px 6px
+    color: rgba(0, 0, 0, 0.6)
+    padding: 2px 8px
     border-bottom: 1px dashed rgba(0, 0, 0, 0.06)
     box-sizing: border-box
+    font-size: 13px
+    line-height: 1.2
 
     &--hour
         font-weight: 600
-        color: rgba(0, 0, 0, 0.75)
+        color: rgba(0, 0, 0, 0.8)
         border-bottom-style: solid
         border-bottom-color: rgba(0, 0, 0, 0.12)
+
+    &--day
+        border-top: 2px solid rgba(0, 0, 0, 0.45)
+        background-color: rgba(0, 0, 0, 0.05)
+
+    .day-label
+        font-size: 12px
+        font-weight: 700
+        color: rgba(0, 0, 0, 0.85)
+
+    .hm-label
+        font-size: 13px
+
+.day-break-line
+    position: absolute
+    left: 0
+    right: 0
+    border-top: 2px solid rgba(0, 0, 0, 0.35)
+    z-index: 0
 
 .reserve-block
     position: absolute
@@ -248,11 +314,12 @@ export default class TunerTimelineView extends Vue {
     background-color: rgba(33, 150, 243, 0.18)
     border: 1px solid rgba(33, 150, 243, 0.6)
     border-radius: 3px
-    padding: 2px 4px
-    font-size: 11px
-    line-height: 1.2
+    padding: 3px 5px
+    font-size: 13px
+    line-height: 1.25
     overflow: hidden
     box-sizing: border-box
+    z-index: 1
 
     &.type-gr
         background-color: rgba(76, 175, 80, 0.18)
@@ -266,18 +333,31 @@ export default class TunerTimelineView extends Vue {
 
     .block-time
         font-weight: 600
-        font-size: 10px
-        opacity: 0.8
+        font-size: 12px
+        opacity: 0.85
+        display: flex
+        align-items: center
+        gap: 6px
+        flex-wrap: wrap
+
+    .rec-badge
+        background-color: #d32f2f
+        color: white
+        font-size: 11px
+        font-weight: 700
+        padding: 1px 6px
+        border-radius: 3px
 
     .block-name
         font-weight: 500
+        font-size: 14px
         white-space: nowrap
         overflow: hidden
         text-overflow: ellipsis
 
     .block-channel
-        opacity: 0.7
-        font-size: 10px
+        opacity: 0.75
+        font-size: 12px
         white-space: nowrap
         overflow: hidden
         text-overflow: ellipsis
