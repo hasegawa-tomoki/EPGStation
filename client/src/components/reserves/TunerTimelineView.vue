@@ -1,5 +1,5 @@
 <template>
-    <div class="tuner-timeline">
+    <div class="tuner-timeline" v-bind:class="{ isDark: $vuetify.theme.dark === true }">
         <div v-if="loading" class="loading-area">
             <v-progress-circular indeterminate color="primary"></v-progress-circular>
         </div>
@@ -233,6 +233,25 @@ export default class TunerTimelineView extends Vue {
 .tuner-timeline
     padding: 8px
 
+    --tt-border: rgba(0, 0, 0, 0.12)
+    --tt-border-soft: rgba(0, 0, 0, 0.06)
+    --tt-bg-strong: rgba(0, 0, 0, 0.06)
+    --tt-bg-medium: rgba(0, 0, 0, 0.04)
+    --tt-bg-weak: rgba(0, 0, 0, 0.02)
+    --tt-fg-strong: rgba(0, 0, 0, 0.85)
+    --tt-fg-mid: rgba(0, 0, 0, 0.7)
+    --tt-fg-weak: rgba(0, 0, 0, 0.55)
+
+    &.isDark
+        --tt-border: rgba(255, 255, 255, 0.18)
+        --tt-border-soft: rgba(255, 255, 255, 0.08)
+        --tt-bg-strong: rgba(255, 255, 255, 0.10)
+        --tt-bg-medium: rgba(255, 255, 255, 0.06)
+        --tt-bg-weak: rgba(255, 255, 255, 0.03)
+        --tt-fg-strong: rgba(255, 255, 255, 0.92)
+        --tt-fg-mid: rgba(255, 255, 255, 0.78)
+        --tt-fg-weak: rgba(255, 255, 255, 0.6)
+
 .loading-area, .empty-area
     display: flex
     align-items: center
@@ -242,8 +261,8 @@ export default class TunerTimelineView extends Vue {
     font-size: 14px
 
 .timeline-wrap
-    border: 1px solid rgba(0, 0, 0, 0.12)
-    background-color: rgba(0, 0, 0, 0.02)
+    border: 1px solid var(--tt-border)
+    background-color: var(--tt-bg-weak)
     overflow-x: auto
 
 .columns-wrap
@@ -254,13 +273,13 @@ export default class TunerTimelineView extends Vue {
 
 .time-axis
     flex: 0 0 80px
-    border-right: 1px solid rgba(0, 0, 0, 0.12)
-    background-color: rgba(0, 0, 0, 0.04)
+    border-right: 1px solid var(--tt-border)
+    background-color: var(--tt-bg-medium)
 
 .tuner-column
     flex: 1 0 220px
     min-width: 220px
-    border-right: 1px solid rgba(0, 0, 0, 0.06)
+    border-right: 1px solid var(--tt-border-soft)
 
 .header
     height: 44px
@@ -270,8 +289,9 @@ export default class TunerTimelineView extends Vue {
     justify-content: center
     font-size: 14px
     font-weight: 600
-    background-color: rgba(0, 0, 0, 0.06)
-    border-bottom: 1px solid rgba(0, 0, 0, 0.12)
+    color: var(--tt-fg-strong)
+    background-color: var(--tt-bg-strong)
+    border-bottom: 1px solid var(--tt-border)
     position: sticky
     top: 0
     z-index: 2
@@ -288,7 +308,7 @@ export default class TunerTimelineView extends Vue {
     position: absolute
     left: 0
     right: 0
-    color: rgba(0, 0, 0, 0.6)
+    color: var(--tt-fg-weak)
     padding: 2px 8px
     box-sizing: border-box
     font-size: 13px
@@ -296,8 +316,8 @@ export default class TunerTimelineView extends Vue {
 
     &--hour
         font-weight: 600
-        color: rgba(0, 0, 0, 0.8)
-        border-top: 1px solid rgba(0, 0, 0, 0.12)
+        color: var(--tt-fg-mid)
+        border-top: 1px solid var(--tt-border)
 
     .hm-label
         font-size: 13px
@@ -317,12 +337,12 @@ export default class TunerTimelineView extends Vue {
     height: 26px
     line-height: 26px
     padding: 0 12px
-    background-color: rgba(33, 150, 243, 0.15)
-    border-top: 2px solid rgba(33, 150, 243, 0.7)
-    border-bottom: 1px solid rgba(33, 150, 243, 0.4)
+    background-color: rgba(33, 150, 243, 0.20)
+    border-top: 2px solid rgba(33, 150, 243, 0.8)
+    border-bottom: 1px solid rgba(33, 150, 243, 0.5)
     font-weight: 700
     font-size: 13px
-    color: rgba(0, 0, 0, 0.85)
+    color: var(--tt-fg-strong)
     box-sizing: border-box
 
 .reserve-block
