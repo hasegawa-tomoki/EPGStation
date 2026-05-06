@@ -38,6 +38,7 @@ export default class RecordedUtil implements IRecordedUtil {
                 isExternal: typeof item.externalPath === 'string' && item.externalPath.length > 0,
                 externalPath: item.externalPath,
                 createdUser: typeof item.createdUser === 'string' && item.createdUser.length > 0 ? item.createdUser : undefined,
+                hasMissingFile: typeof item.videoFiles !== 'undefined' && item.videoFiles.some(v => v.isMissing === true),
             },
             recordedItem: item,
             isSelected: false,

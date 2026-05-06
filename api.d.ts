@@ -426,6 +426,7 @@ export interface VideoFile {
     filename: string;
     type: VideoFileType;
     size: number;
+    isMissing?: boolean; // 実ファイルが存在しない (DB と filesystem の不整合) ときのみ true
 }
 
 export interface DropLogFile {

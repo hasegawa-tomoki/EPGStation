@@ -1247,6 +1247,9 @@ components:
                 size:
                     description: ファイルサイズ
                     type: integer
+                isMissing:
+                    description: 実ファイルが存在しない (DB と filesystem の不整合) ときのみ true
+                    type: boolean
 
         VideoFileDuration:
             description: ビデオファイルの長さ

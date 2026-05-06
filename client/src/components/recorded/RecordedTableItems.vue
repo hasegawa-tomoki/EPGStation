@@ -33,8 +33,9 @@
                     <div class="name subtitle-1 font-weight-medium mt-1">
                         {{ item.display.name }}
                     </div>
-                    <div v-if="item.display.isExternal === true" class="mt-1">
-                        <span class="nas-badge">NAS</span>
+                    <div v-if="item.display.isExternal === true || item.display.hasMissingFile === true" class="mt-1">
+                        <span v-if="item.display.isExternal === true" class="nas-badge">NAS</span>
+                        <span v-if="item.display.hasMissingFile === true" class="missing-badge">録画ファイルなし</span>
                     </div>
                 </div>
                 <div class="menu ml-2">
@@ -132,6 +133,18 @@ export default class RecordedTableItems extends Vue {
         line-height: 1.4
         color: rgba(0, 0, 0, 0.87)
         background-color: #FFCC80
+        border-radius: 4px
+        vertical-align: middle
+
+    .missing-badge
+        display: inline-block
+        padding: 1px 4px
+        margin-right: 6px
+        font-size: 10px
+        font-weight: 700
+        line-height: 1.4
+        color: white
+        background-color: #d32f2f
         border-radius: 4px
         vertical-align: middle
 </style>

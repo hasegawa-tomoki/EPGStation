@@ -27,6 +27,7 @@
                         <div class="content-description">
                             <div class="title font-weight-bold d-flex align-center">
                                 <span v-if="recorded.display.isExternal === true" class="nas-badge">NAS</span>
+                                <span v-if="recorded.display.hasMissingFile === true" class="missing-badge">録画ファイルなし</span>
                                 {{ recorded.display.name }}
                             </div>
                             <div v-if="recorded.display.isExternal === true" class="subtitle-2 font-weight-light external-path">
@@ -342,6 +343,19 @@ $switch-display-width: 800px
     line-height: 1.4
     color: rgba(0, 0, 0, 0.87)
     background-color: #FFCC80
+    border-radius: 4px
+    vertical-align: middle
+
+.missing-badge
+    display: inline-block
+    flex-shrink: 0
+    padding: 2px 6px
+    margin-right: 8px
+    font-size: 12px
+    font-weight: 700
+    line-height: 1.4
+    color: white
+    background-color: #d32f2f
     border-radius: 4px
     vertical-align: middle
 

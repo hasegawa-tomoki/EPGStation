@@ -22,6 +22,7 @@ export interface RecordedDisplayData {
         isExternal: boolean;
         externalPath?: string;
         createdUser?: string; // 録画作成ユーザー (trusted/未認証は未定義 = 表示しない)
+        hasMissingFile?: boolean; // videoFile のいずれかで実ファイルが見つからない場合 true
     };
     recordedItem: apid.RecordedItem;
     isSelected: boolean;

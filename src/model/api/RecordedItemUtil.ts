@@ -1,12 +1,40 @@
+import * as fs from 'fs';
 import * as path from 'path';
-import { injectable } from 'inversify';
+import { inject, injectable } from 'inversify';
 import * as apid from '../../../api';
 import Recorded from '../../db/entities/Recorded';
+import VideoFileEntity from '../../db/entities/VideoFile';
+import IConfigFile from '../IConfigFile';
+import IConfiguration from '../IConfiguration';
 import { EncodeRecordedIdIndex } from '../service/encode/IEncodeManageModel';
 import IRecordedItemUtil, { RuleKeywordIndex } from './IRecordedItemUtil';
 
 @injectable()
 export default class RecordedItemUtil implements IRecordedItemUtil {
+    private config: IConfigFile;
+
+    constructor(@inject('IConfiguration') configuration: IConfiguration) {
+        this.config = configuration.getConfig();
+    }
+
+    /** VideoUtil と同じロジックでフルパス解決 (RecordedItemUtil 単体で完結させるためコピー) */
+    private resolveFullPath(v: VideoFileEntity): string | null {
+        if (typeof v.externalStorageName === 'string' && v.externalStorageName.length > 0) {
+            const ext = (this.config.externalStorage ?? []).find(s => s.name === v.externalStorageName);
+            if (typeof ext === 'undefined') return null;
+            return path.join(ext.path, v.filePath);
+        }
+        if (v.parentDirectoryName === 'tmp' && typeof this.config.recordedTmp !== 'undefined') {
+            return path.join(this.config.recordedTmp, v.filePath);
+        }
+        for (const r of this.config.recorded) {
+            if (r.name === v.parentDirectoryName) {
+                return path.join(r.path, v.filePath);
+            }
+        }
+        return null;
+    }
+
     /**
      * Recorded を RecordedItem に変換する
      * @param recorded: Recorded
@@ -133,13 +161,18 @@ export default class RecordedItemUtil implements IRecordedItemUtil {
 
         if (typeof recorded.videoFiles !== 'undefined') {
             item.videoFiles = recorded.videoFiles.map(v => {
-                return {
+                const out: apid.VideoFile = {
                     id: v.id,
                     name: v.name,
                     filename: path.basename(v.filePath),
                     type: v.type as apid.VideoFileType,
                     size: v.size,
                 };
+                const full = this.resolveFullPath(v);
+                if (full === null || !fs.existsSync(full)) {
+                    out.isMissing = true;
+                }
+                return out;
             });
         }
 

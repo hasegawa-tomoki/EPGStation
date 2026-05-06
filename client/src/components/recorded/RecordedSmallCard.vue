@@ -12,6 +12,7 @@
         <div v-on:click="gotoDetail" class="content pa-2 my-auto">
             <div class="d-flex align-center">
                 <span v-if="item.display.isExternal === true" class="nas-badge">NAS</span>
+                <span v-if="item.display.hasMissingFile === true" class="missing-badge">録画ファイルなし</span>
                 <div class="text mt-1 subtitle-2 font-weight-bold">{{ item.display.name }}</div>
                 <div v-if="isEditMode === false" class="menu-wrap">
                     <RecordedItemMenu :recordedItem="item.recordedItem" v-on:stopEncode="stopEncode"></RecordedItemMenu>
@@ -131,6 +132,18 @@ export default class RecordedSmallCard extends Vue {
             line-height: 1.4
             color: rgba(0, 0, 0, 0.87)
             background-color: #FFCC80
+            border-radius: 4px
+
+        .missing-badge
+            display: inline-block
+            flex-shrink: 0
+            padding: 1px 4px
+            margin-right: 6px
+            font-size: 10px
+            font-weight: 700
+            line-height: 1.4
+            color: white
+            background-color: #d32f2f
             border-radius: 4px
 
     .menu-wrap
