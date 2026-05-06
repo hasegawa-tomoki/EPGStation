@@ -14,7 +14,7 @@
                             :key="`s${i}`"
                             class="time-tick"
                             :class="{ 'time-tick--hour': slot.isHour }"
-                            :style="{ top: i * rowPx + 'px', height: rowPx + 'px' }"
+                            :style="{ top: slot.topPx + 'px', height: rowPx + 'px' }"
                         >
                             <div v-if="slot.isHour" class="hm-label">{{ slot.label }}</div>
                         </div>
@@ -43,12 +43,12 @@
                         </div>
                     </div>
                 </div>
-                <div class="day-header-overlay">
+                <div class="day-header-overlay" :style="{ top: headerHeightPx + 'px' }">
                     <div
                         v-for="db in dayBreakSlots"
                         :key="`dh${db.index}`"
                         class="day-header-band"
-                        :style="{ top: headerHeightPx + db.index * rowPx + 'px' }"
+                        :style="{ top: db.topPx + 'px', height: dayHeaderPx + 'px', lineHeight: dayHeaderPx + 'px' }"
                     >
                         {{ db.dayLabel }}
                     </div>
@@ -69,6 +69,7 @@ import * as apid from '../../../../api';
 
 const SLOT_MIN = 30; // 30 分刻み
 const ROW_PX = 30; // 30 分 = 30px
+const DAY_HEADER_PX = 30; // 日付ヘッダ band の高さ (band 26px + 余白 4px)
 const DAY_LABELS = ['日', '月', '火', '水', '木', '金', '土'];
 
 interface TimeSlot {
@@ -76,6 +77,8 @@ interface TimeSlot {
     isHour: boolean;
     isDayBreak: boolean;
     dayLabel: string;
+    topPx: number; // この slot の絶対 top (前にある day-header の累積 px を含む)
+    headerOffsetBeforePx: number; // この slot の手前にあるべき day-header の top (この slot が dayBreak のときのみ有効)
 }
 interface Block {
     reserveId: number;
@@ -95,6 +98,8 @@ export default class TunerTimelineView extends Vue {
     public timeSlots: TimeSlot[] = [];
     public blocksByTuner: { [key: number]: Block[] } = {};
     public rowPx: number = ROW_PX;
+    public dayHeaderPx: number = DAY_HEADER_PX;
+    private totalHeaderPx: number = 0;
 
     private reservesApiModel: IReservesApiModel = container.get<IReservesApiModel>('IReservesApiModel');
     private setting: ISettingStorageModel = container.get<ISettingStorageModel>('ISettingStorageModel');
@@ -116,13 +121,13 @@ export default class TunerTimelineView extends Vue {
     }
 
     get trackHeightPx(): number {
-        return this.timeSlots.length * ROW_PX;
+        return this.timeSlots.length * ROW_PX + this.totalHeaderPx;
     }
 
-    get dayBreakSlots(): Array<{ index: number; dayLabel: string }> {
-        const result: Array<{ index: number; dayLabel: string }> = [];
+    get dayBreakSlots(): Array<{ index: number; dayLabel: string; topPx: number }> {
+        const result: Array<{ index: number; dayLabel: string; topPx: number }> = [];
         this.timeSlots.forEach((s, i) => {
-            if (s.isDayBreak) result.push({ index: i, dayLabel: s.dayLabel });
+            if (s.isDayBreak) result.push({ index: i, dayLabel: s.dayLabel, topPx: s.headerOffsetBeforePx });
         });
         return result;
     }
@@ -160,6 +165,7 @@ export default class TunerTimelineView extends Vue {
 
         const slots: TimeSlot[] = [];
         let lastDayKey = '';
+        let cumulativeHeaderPx = 0;
         for (let i = 0; i < slotsCount; i++) {
             const m = this.startEpochMin + i * SLOT_MIN;
             const d = new Date(m * 60000);
@@ -168,14 +174,19 @@ export default class TunerTimelineView extends Vue {
             const dayKey = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
             const isDayBreak = dayKey !== lastDayKey;
             lastDayKey = dayKey;
+            const headerOffsetBefore = cumulativeHeaderPx; // この slot の手前にあるべき header の top
+            if (isDayBreak) cumulativeHeaderPx += DAY_HEADER_PX;
             slots.push({
                 label: `${this.zeroPad(hh)}:${this.zeroPad(mm)}`,
                 isHour: mm === 0,
                 isDayBreak,
                 dayLabel: this.fmtFullDate(d),
+                topPx: i * ROW_PX + cumulativeHeaderPx,
+                headerOffsetBeforePx: headerOffsetBefore,
             });
         }
         this.timeSlots = slots;
+        this.totalHeaderPx = cumulativeHeaderPx;
 
         const nowMs = now.getTime();
         const buckets: { [key: number]: Block[] } = {};
@@ -184,23 +195,38 @@ export default class TunerTimelineView extends Vue {
             const endMin = a.endAt / 60000;
             if (endMin <= this.startEpochMin) continue;
             const clampedStart = Math.max(startMin, this.startEpochMin);
-            const topMin = clampedStart - this.startEpochMin;
-            const durationMin = Math.max(SLOT_MIN / 2, endMin - clampedStart);
             const isRecording = a.startAt <= nowMs && nowMs < a.endAt;
+            const startTop = this.timeMinToTopPx(clampedStart, slots);
+            const endTop = this.timeMinToTopPx(endMin, slots);
             const block: Block = {
                 reserveId: a.reserveId,
                 name: a.name,
                 channelName: a.channelName,
                 channelType: a.channelType,
                 timeRange: this.formatTimeRange(a.startAt, a.endAt, nowMs),
-                topPx: (topMin / SLOT_MIN) * ROW_PX,
-                heightPx: (durationMin / SLOT_MIN) * ROW_PX,
+                topPx: startTop,
+                heightPx: Math.max(ROW_PX / 2, endTop - startTop),
                 isRecording,
             };
             if (typeof buckets[a.tunerIndex] === 'undefined') buckets[a.tunerIndex] = [];
             buckets[a.tunerIndex].push(block);
         }
         this.blocksByTuner = buckets;
+    }
+
+    /** 任意の時刻 (epoch min) をトラック上の top px に変換。slot 内は分数比例で配置する。 */
+    private timeMinToTopPx(timeMin: number, slots: TimeSlot[]): number {
+        if (slots.length === 0) return 0;
+        const offsetMin = timeMin - this.startEpochMin;
+        const idx = Math.floor(offsetMin / SLOT_MIN);
+        if (idx <= 0) return slots[0].topPx;
+        if (idx >= slots.length) {
+            const last = slots[slots.length - 1];
+            return last.topPx + ROW_PX;
+        }
+        const slot = slots[idx];
+        const intra = offsetMin - idx * SLOT_MIN;
+        return slot.topPx + (intra / SLOT_MIN) * ROW_PX;
     }
 
     /** "hh:mm-hh:mm (xx分後 / x時間x分後)" — 日付は別の day-header-band 行で出すのでここでは出さない */
