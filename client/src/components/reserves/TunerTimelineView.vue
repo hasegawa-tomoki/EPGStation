@@ -5,42 +5,52 @@
         </div>
         <div v-else-if="data === null || data.tuners.length === 0" class="empty-area">チューナー情報を取得できません</div>
         <div v-else class="timeline-wrap">
-            <div class="time-axis">
-                <div class="header axis-header">時刻</div>
-                <div class="track" :style="{ height: trackHeightPx + 'px' }">
-                    <div
-                        v-for="(slot, i) in timeSlots"
-                        :key="`s${i}`"
-                        class="time-tick"
-                        :class="{ 'time-tick--hour': slot.isHour, 'time-tick--day': slot.isDayBreak }"
-                        :style="{ top: i * rowPx + 'px', height: rowPx + 'px' }"
-                    >
-                        <div v-if="slot.isDayBreak" class="day-label">{{ slot.dayLabel }}</div>
-                        <div class="hm-label">{{ slot.label }}</div>
+            <div class="columns-wrap">
+                <div class="time-axis">
+                    <div class="header axis-header">時刻</div>
+                    <div class="track" :style="{ height: trackHeightPx + 'px' }">
+                        <div
+                            v-for="(slot, i) in timeSlots"
+                            :key="`s${i}`"
+                            class="time-tick"
+                            :class="{ 'time-tick--hour': slot.isHour }"
+                            :style="{ top: i * rowPx + 'px', height: rowPx + 'px' }"
+                        >
+                            <div v-if="slot.isHour" class="hm-label">{{ slot.label }}</div>
+                        </div>
                     </div>
                 </div>
-            </div>
-            <div v-for="tuner in data.tuners" :key="`t${tuner.index}`" class="tuner-column">
-                <div class="header tuner-header">
-                    <div class="tuner-name">T{{ tuner.index }}</div>
-                    <div class="tuner-types">{{ tuner.types.join('/') }}</div>
-                </div>
-                <div class="track" :style="{ height: trackHeightPx + 'px' }">
-                    <div v-for="db in dayBreakSlots" :key="`d${tuner.index}-${db.index}`" class="day-break-line" :style="{ top: db.index * rowPx + 'px' }"></div>
-                    <div
-                        v-for="block in blocksByTuner[tuner.index] || []"
-                        :key="`b${block.reserveId}`"
-                        class="reserve-block"
-                        :class="`type-${block.channelType.toLowerCase()}`"
-                        :style="{ top: block.topPx + 'px', height: block.heightPx + 'px' }"
-                        :title="`${block.name}\n${block.channelName}\n${block.timeRange}`"
-                    >
-                        <div class="block-time">
-                            <span v-if="block.isRecording" class="rec-badge">録画中</span>
-                            <span>{{ block.timeRange }}</span>
+                <div v-for="tuner in data.tuners" :key="`t${tuner.index}`" class="tuner-column">
+                    <div class="header tuner-header">
+                        <div class="tuner-name">T{{ tuner.index }}</div>
+                        <div class="tuner-types">{{ tuner.types.join('/') }}</div>
+                    </div>
+                    <div class="track" :style="{ height: trackHeightPx + 'px' }">
+                        <div
+                            v-for="block in blocksByTuner[tuner.index] || []"
+                            :key="`b${block.reserveId}`"
+                            class="reserve-block"
+                            :class="`type-${block.channelType.toLowerCase()}`"
+                            :style="{ top: block.topPx + 'px', height: block.heightPx + 'px' }"
+                            :title="`${block.name}\n${block.channelName}\n${block.timeRange}`"
+                        >
+                            <div class="block-time">
+                                <span v-if="block.isRecording" class="rec-badge">録画中</span>
+                                <span>{{ block.timeRange }}</span>
+                            </div>
+                            <div class="block-name">{{ block.name }}</div>
+                            <div class="block-channel">{{ block.channelName }}</div>
                         </div>
-                        <div class="block-name">{{ block.name }}</div>
-                        <div class="block-channel">{{ block.channelName }}</div>
+                    </div>
+                </div>
+                <div class="day-header-overlay">
+                    <div
+                        v-for="db in dayBreakSlots"
+                        :key="`dh${db.index}`"
+                        class="day-header-band"
+                        :style="{ top: headerHeightPx + db.index * rowPx + 'px' }"
+                    >
+                        {{ db.dayLabel }}
                     </div>
                 </div>
             </div>
@@ -109,12 +119,16 @@ export default class TunerTimelineView extends Vue {
         return this.timeSlots.length * ROW_PX;
     }
 
-    get dayBreakSlots(): Array<{ index: number }> {
-        const result: Array<{ index: number }> = [];
+    get dayBreakSlots(): Array<{ index: number; dayLabel: string }> {
+        const result: Array<{ index: number; dayLabel: string }> = [];
         this.timeSlots.forEach((s, i) => {
-            if (s.isDayBreak) result.push({ index: i });
+            if (s.isDayBreak) result.push({ index: i, dayLabel: s.dayLabel });
         });
         return result;
+    }
+
+    get headerHeightPx(): number {
+        return 44; // .header の height と一致
     }
 
     private async fetch(): Promise<void> {
@@ -189,9 +203,9 @@ export default class TunerTimelineView extends Vue {
         this.blocksByTuner = buckets;
     }
 
-    /** "yyyy/mm/dd (曜) hh:mm-hh:mm (xx分後 / x時間x分後)" */
+    /** "hh:mm-hh:mm (xx分後 / x時間x分後)" — 日付は別の day-header-band 行で出すのでここでは出さない */
     private formatTimeRange(startAt: number, endAt: number, nowMs: number): string {
-        const head = `${this.fmtFullDate(new Date(startAt))} ${this.fmtHM(startAt)}-${this.fmtHM(endAt)}`;
+        const head = `${this.fmtHM(startAt)}-${this.fmtHM(endAt)}`;
         const diffMin = Math.floor((startAt - nowMs) / 60000);
         if (diffMin <= 0) return head;
         if (diffMin < 60) return `${head} (${diffMin}分後)`;
@@ -228,20 +242,24 @@ export default class TunerTimelineView extends Vue {
     font-size: 14px
 
 .timeline-wrap
-    display: flex
-    align-items: flex-start
     border: 1px solid rgba(0, 0, 0, 0.12)
     background-color: rgba(0, 0, 0, 0.02)
     overflow-x: auto
 
+.columns-wrap
+    display: flex
+    align-items: flex-start
+    position: relative
+    min-width: max-content
+
 .time-axis
-    flex: 0 0 130px
+    flex: 0 0 80px
     border-right: 1px solid rgba(0, 0, 0, 0.12)
     background-color: rgba(0, 0, 0, 0.04)
 
 .tuner-column
-    flex: 1 0 200px
-    min-width: 200px
+    flex: 1 0 220px
+    min-width: 220px
     border-right: 1px solid rgba(0, 0, 0, 0.06)
 
 .header
@@ -272,7 +290,6 @@ export default class TunerTimelineView extends Vue {
     right: 0
     color: rgba(0, 0, 0, 0.6)
     padding: 2px 8px
-    border-bottom: 1px dashed rgba(0, 0, 0, 0.06)
     box-sizing: border-box
     font-size: 13px
     line-height: 1.2
@@ -280,27 +297,33 @@ export default class TunerTimelineView extends Vue {
     &--hour
         font-weight: 600
         color: rgba(0, 0, 0, 0.8)
-        border-bottom-style: solid
-        border-bottom-color: rgba(0, 0, 0, 0.12)
-
-    &--day
-        border-top: 2px solid rgba(0, 0, 0, 0.45)
-        background-color: rgba(0, 0, 0, 0.05)
-
-    .day-label
-        font-size: 12px
-        font-weight: 700
-        color: rgba(0, 0, 0, 0.85)
+        border-top: 1px solid rgba(0, 0, 0, 0.12)
 
     .hm-label
         font-size: 13px
 
-.day-break-line
+.day-header-overlay
+    position: absolute
+    top: 0
+    left: 0
+    right: 0
+    pointer-events: none
+    z-index: 3
+
+.day-header-band
     position: absolute
     left: 0
     right: 0
-    border-top: 2px solid rgba(0, 0, 0, 0.35)
-    z-index: 0
+    height: 26px
+    line-height: 26px
+    padding: 0 12px
+    background-color: rgba(33, 150, 243, 0.15)
+    border-top: 2px solid rgba(33, 150, 243, 0.7)
+    border-bottom: 1px solid rgba(33, 150, 243, 0.4)
+    font-weight: 700
+    font-size: 13px
+    color: rgba(0, 0, 0, 0.85)
+    box-sizing: border-box
 
 .reserve-block
     position: absolute
