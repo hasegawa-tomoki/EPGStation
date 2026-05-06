@@ -26,12 +26,7 @@
                     <div class="tuner-types">{{ tuner.types.join('/') }}</div>
                 </div>
                 <div class="track" :style="{ height: trackHeightPx + 'px' }">
-                    <div
-                        v-for="db in dayBreakSlots"
-                        :key="`d${tuner.index}-${db.index}`"
-                        class="day-break-line"
-                        :style="{ top: db.index * rowPx + 'px' }"
-                    ></div>
+                    <div v-for="db in dayBreakSlots" :key="`d${tuner.index}-${db.index}`" class="day-break-line" :style="{ top: db.index * rowPx + 'px' }"></div>
                     <div
                         v-for="block in blocksByTuner[tuner.index] || []"
                         :key="`b${block.reserveId}`"
