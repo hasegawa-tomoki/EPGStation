@@ -836,6 +836,14 @@ export interface ExternalStorageFileList {
 }
 
 /**
+ * 外部ストレージ root 配下のディレクトリ候補一覧 (相対パス・深さ優先)
+ */
+export interface ExternalStorageDirectoryList {
+    storage: ExternalStorageItem;
+    items: string[];
+}
+
+/**
  * 録画を外部ストレージに移動する際のオプション (HTTP body)
  */
 export interface MoveToExternalStorageOption {

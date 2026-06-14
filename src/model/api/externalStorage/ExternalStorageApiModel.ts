@@ -63,6 +63,48 @@ export default class ExternalStorageApiModel implements IExternalStorageApiModel
     }
 
     /**
+     * 外部ストレージ root 配下のディレクトリを最大 depth 階層まで列挙し、
+     * storage root からの相対パス (subDirectory として使える文字列) の一覧を返す。
+     * 移動先サブディレクトリの候補表示に使う。深さ優先で親→子の順に並ぶ。
+     */
+    public async getDirectories(storageName: string, depth: number): Promise<apid.ExternalStorageDirectoryList> {
+        const storage = this.resolveStorage(storageName);
+        const maxDepth = Number.isFinite(depth) && depth > 0 ? Math.min(Math.floor(depth), 5) : 2;
+        const resolvedRoot = path.resolve(storage.path);
+
+        const items: string[] = [];
+        const MAX_ENTRIES = 2000; // 病的に巨大なツリーでの暴走防止
+
+        const walk = async (relParts: string[], currentDepth: number): Promise<void> => {
+            if (currentDepth > maxDepth || items.length >= MAX_ENTRIES) {
+                return;
+            }
+            const dirFull = relParts.length > 0 ? path.join(resolvedRoot, ...relParts) : resolvedRoot;
+            let entries: fs.Dirent[];
+            try {
+                entries = await fs.promises.readdir(dirFull, { withFileTypes: true });
+            } catch {
+                // 読み取り権限なし等は無視してスキップ
+                return;
+            }
+            // ディレクトリのみ (シンボリックリンクは isDirectory() が false になり自然に除外される)、name 昇順
+            const dirs = entries.filter(e => e.isDirectory()).sort((a, b) => a.name.localeCompare(b.name));
+            for (const d of dirs) {
+                if (items.length >= MAX_ENTRIES) {
+                    break;
+                }
+                const childParts = [...relParts, d.name];
+                items.push(childParts.join('/'));
+                await walk(childParts, currentDepth + 1);
+            }
+        };
+
+        await walk([], 1);
+
+        return { storage: { name: storage.name, path: storage.path }, items };
+    }
+
+    /**
      * 外部ストレージの指定サブパス配下のファイル/ディレクトリ一覧を返す
      */
     public async getFiles(storageName: string, subPath: string): Promise<apid.ExternalStorageFileList> {

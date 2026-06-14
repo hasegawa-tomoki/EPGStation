@@ -17,6 +17,14 @@ export default class ExternalStorageApiModel implements IExternalStorageApiModel
         return result.data;
     }
 
+    public async getDirectories(storageName: string, depth: number = 2): Promise<apid.ExternalStorageDirectoryList> {
+        const result = await this.repository.get(`/externalStorages/${encodeURIComponent(storageName)}/directories`, {
+            params: { depth },
+        });
+
+        return result.data;
+    }
+
     public async getFiles(storageName: string, subPath: string): Promise<apid.ExternalStorageFileList> {
         const result = await this.repository.get(`/externalStorages/${encodeURIComponent(storageName)}/files`, {
             params: { subPath },

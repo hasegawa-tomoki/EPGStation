@@ -2,6 +2,7 @@ import * as apid from '../../../../api';
 
 export default interface IExternalStorageApiModel {
     getList(): apid.ExternalStorageList;
+    getDirectories(storageName: string, depth: number): Promise<apid.ExternalStorageDirectoryList>;
     getFiles(storageName: string, subPath: string): Promise<apid.ExternalStorageFileList>;
     rename(storageName: string, subPath: string, newName: string): Promise<void>;
     mkdir(storageName: string, parentSubPath: string, folderName: string): Promise<void>;

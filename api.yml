@@ -1719,6 +1719,21 @@ components:
                     items:
                         $ref: '#/components/schemas/ExternalStorageRelatedRecorded'
 
+        ExternalStorageDirectoryList:
+            description: 外部ストレージ root 配下のディレクトリ候補一覧 (相対パス・深さ優先)
+            type: object
+            required:
+                - storage
+                - items
+            properties:
+                storage:
+                    $ref: '#/components/schemas/ExternalStorageItem'
+                items:
+                    description: storage root からの相対パス一覧 (subDirectory として使える)
+                    type: array
+                    items:
+                        type: string
+
         MoveToExternalStorageOption:
             description: 録画を外部ストレージに移動する際のオプション
             type: object

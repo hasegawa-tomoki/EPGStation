@@ -23,8 +23,9 @@
                 <v-combobox
                     v-model="subDirectory"
                     :items="subDirectorySuggestions"
+                    :loading="isLoadingDirectories"
                     label="サブディレクトリ (任意)"
-                    hint="過去の移動先から選択するか、新しいパスを入力"
+                    hint="ストレージ内のフォルダ (2階層) や過去の移動先から選択するか、新しいパスを入力"
                     persistent-hint
                     clearable
                 ></v-combobox>
@@ -68,7 +69,13 @@ export default class MoveToExternalDialog extends Vue {
     public isSubmitting: boolean = false;
     public progressCurrent: number = 0;
     public history: apid.ExternalStorageMoveHistoryItem[] = [];
+    public directories: string[] = [];
+    public isLoadingDirectories: boolean = false;
 
+    /**
+     * サブディレクトリ候補。過去の移動先 (履歴) を優先で先頭に並べ、
+     * その後に選択中ストレージ内の実フォルダ (2階層) を重複排除して続ける。
+     */
     get subDirectorySuggestions(): string[] {
         if (this.selectedStorageName === null) return [];
         const seen = new Set<string>();
@@ -79,6 +86,12 @@ export default class MoveToExternalDialog extends Vue {
             if (seen.has(h.subDirectory)) continue;
             seen.add(h.subDirectory);
             out.push(h.subDirectory);
+        }
+        for (const d of this.directories) {
+            if (d.length === 0) continue;
+            if (seen.has(d)) continue;
+            seen.add(d);
+            out.push(d);
         }
         return out;
     }
@@ -118,12 +131,41 @@ export default class MoveToExternalDialog extends Vue {
     @Watch('isOpen')
     public async onOpen(newVal: boolean): Promise<void> {
         if (newVal === true) {
+            this.directories = [];
             await Promise.all([this.loadStorages(), this.loadHistory()]);
             this.subDirectory = '';
             this.progressCurrent = 0;
             if (this.storageOptions.length === 1 && this.selectedStorageName === null) {
                 this.selectedStorageName = this.storageOptions[0].name;
             }
+            if (this.selectedStorageName !== null) {
+                await this.loadDirectories(this.selectedStorageName);
+            }
+        }
+    }
+
+    @Watch('selectedStorageName')
+    public async onStorageChange(newVal: string | null): Promise<void> {
+        // ダイアログを開いていない間の変化 (リセット等) は無視
+        if (this.isOpen === false || newVal === null) {
+            this.directories = [];
+            return;
+        }
+        await this.loadDirectories(newVal);
+    }
+
+    public async loadDirectories(storageName: string): Promise<void> {
+        this.isLoadingDirectories = true;
+        try {
+            const res = await this.externalStorageApi.getDirectories(storageName, 2);
+            // 取得中にストレージが切り替わっていたら破棄
+            if (this.selectedStorageName === storageName) {
+                this.directories = res.items;
+            }
+        } catch (err) {
+            this.directories = [];
+        } finally {
+            this.isLoadingDirectories = false;
         }
     }
 
