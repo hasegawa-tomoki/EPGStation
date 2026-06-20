@@ -159,6 +159,12 @@ export default class Navigation extends Vue {
         &:before
             opacity: 0.12
 
+// バッジ付き行でインラインバッジが行高を広げてもアイコンとタイトルがずれないよう縦中央揃えにする
+.v-list-item__icon
+    align-self: center
+    margin-top: 0
+    margin-bottom: 0
+
 // iOS デバイスで一番下までスクロールできないため
 .v-navigation-drawer
     height: 100% !important
