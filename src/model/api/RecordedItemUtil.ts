@@ -36,6 +36,23 @@ export default class RecordedItemUtil implements IRecordedItemUtil {
     }
 
     /**
+     * 実ファイルの存在チェック。
+     * DB 上のパスと実ファイル名の Unicode 正規化形が食い違う場合 (macOS / SMB 由来の
+     * NFD 分解濁点や互換漢字 塚 U+FA10 など) に偽陰性で「録画ファイルなし」と
+     * 判定しないよう、NFC / NFD いずれの形でも存在を確認する
+     * @param full: フルパス
+     * @return boolean
+     */
+    private fileExists(full: string): boolean {
+        if (fs.existsSync(full)) return true;
+        for (const form of ['NFC', 'NFD'] as const) {
+            const alt = full.normalize(form);
+            if (alt !== full && fs.existsSync(alt)) return true;
+        }
+        return false;
+    }
+
+    /**
      * Recorded を RecordedItem に変換する
      * @param recorded: Recorded
      * @param isHalfWidth isHalfWidth
@@ -169,7 +186,7 @@ export default class RecordedItemUtil implements IRecordedItemUtil {
                     size: v.size,
                 };
                 const full = this.resolveFullPath(v);
-                if (full === null || !fs.existsSync(full)) {
+                if (full === null || !this.fileExists(full)) {
                     out.isMissing = true;
                 }
                 return out;

@@ -62,7 +62,11 @@ namespace StrUtil {
      * @return string
      */
     export const toHalf = (str: string): string => {
-        const tmp = str.replace(/[！-～]/g, s => {
+        // Unicode 正規化 (NFC)。
+        // macOS / SMB 由来の NFD 分解濁点や互換漢字 (例: 塚 U+FA10) を統合し、
+        // 保存される halfWidth* カラムと検索キーワードの双方を NFC に揃えて
+        // 「濁点があると検索ヒットしない」等のミスマッチを防ぐ
+        const tmp = str.normalize('NFC').replace(/[！-～]/g, s => {
             return String.fromCharCode(s.charCodeAt(0) - 0xfee0);
         });
 
